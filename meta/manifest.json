@@ -3,11 +3,6 @@
   "version": "2.1.21",
   "description": "iCloud Passwords lets you fill passwords from iCloud Keychain when signing in to websites using Firefox.",
   "manifest_version": 3,
-  "icons": {
-    "16": "./images/PasswordsExtensionIcon_16.png",
-    "32": "./images/PasswordsExtensionIcon_32.png",
-    "128": "./images/PasswordsExtensionIcon_128.png"
-  },
   "action": {
     "default_icon": {
       "16": "./images/PasswordsToolbar_icon16.png",
@@ -15,10 +10,15 @@
     },
     "default_popup": "./popup.html"
   },
+  "icons": {
+    "16": "./images/PasswordsExtensionIcon_16.png",
+    "32": "./images/PasswordsExtensionIcon_32.png",
+    "128": "./images/PasswordsExtensionIcon_128.png"
+  },
+  "permissions": ["nativeMessaging"],
   "background": {
     "scripts": ["./background.js"]
   },
-  "permissions": ["nativeMessaging"],
   "browser_specific_settings": {
     "gecko": {
       "id": "password-manager-firefox-extension@apple.com"

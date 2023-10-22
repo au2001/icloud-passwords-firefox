@@ -9,6 +9,9 @@ module.exports = {
   },
   resolve: {
     extensions: [".tsx", ".ts", ".jsx", ".js"],
+    alias: {
+      sjcl: "./sjcl.cjs",
+    },
     fallback: {
       crypto: false,
     },
