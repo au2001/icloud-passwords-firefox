@@ -6,10 +6,14 @@
     "url": "git+ssh://git@github.com/au2001/icloud-passwords-firefox.git"
   },
   "scripts": {
+    "start": "web-ext run",
+    "lint": "web-ext lint",
     "format": "prettier --write ."
   },
   "dependencies": {},
   "devDependencies": {
-    "prettier": "^3.0.3"
+    "prettier": "^3.0.3",
+    "web-ext": "^7.8.0",
+    "web-ext-plugin": "^2.8.1"
   }
 }
