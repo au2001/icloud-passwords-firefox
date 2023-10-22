@@ -1,5 +1,5 @@
+import styles from "./styles.module.scss";
+
 export function Popup() {
-  return (
-    <p>Hello, World!</p>
-  );
+  return <p className={styles.red}>Hello, World!</p>;
 }
