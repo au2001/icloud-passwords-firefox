@@ -1,19 +1,34 @@
 {
   "name": "icloud-passwords-firefox",
   "version": "1.0.0",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/au2001/icloud-passwords-firefox.git"
   },
   "scripts": {
-    "start": "web-ext run",
-    "lint": "web-ext lint",
+    "start": "concurrently \"npm run build:watch\" \"npm run preview\"",
+    "preview": "web-ext run",
+    "build:watch": "webpack -w",
+    "build": "rm -rf dist && webpack --mode=production && web-ext build",
+    "lint": "web-ext lint && eslint ./src",
     "format": "prettier --write ."
   },
   "dependencies": {},
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.8.0",
+    "@typescript-eslint/parser": "^6.8.0",
+    "concurrently": "^8.2.2",
+    "copy-webpack-plugin": "^11.0.0",
+    "eslint": "^8.52.0",
     "prettier": "^3.0.3",
     "web-ext": "^7.8.0",
-    "web-ext-plugin": "^2.8.1"
+    "webpack-cli": "^5.1.4"
+  },
+  "webExt": {
+    "sourceDir": "./dist",
+    "build": {
+      "overwriteDest": true
+    }
   }
 }
