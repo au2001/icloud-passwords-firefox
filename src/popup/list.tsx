@@ -16,17 +16,24 @@ export function ListView() {
 
     browser.runtime
       .sendMessage({
-        cmd: "GET_LOGIN_NAMES",
+        cmd: "GET_LOGIN_NAMES_FOR_URL",
         tabId: tab.id,
         url: tab.url,
       })
       .then(setLoginNames);
   }, [tab?.url]);
 
-  const handleAutoFillLogin = (loginName: LoginName) => {
+  const handleAutoFillPassword = (loginName: LoginName) => {
     if (tab?.id === undefined || tab?.url === undefined) return;
 
-    console.log(loginName.username);
+    // Can't use GET_PASSWORD_FOR_LOGIN_NAME here
+    // See https://bugzilla.mozilla.org/show_bug.cgi?id=1292701
+    browser.runtime.sendMessage({
+      cmd: "AUTO_FILL_PASSWORD",
+      tabId: tab.id,
+      url: tab.url,
+      loginName,
+    });
   };
 
   if (
@@ -47,7 +54,7 @@ export function ListView() {
               href="#"
               onClick={(e) => {
                 e.preventDefault();
-                handleAutoFillLogin(loginName);
+                handleAutoFillPassword(loginName);
               }}
             >
               {loginName.username}

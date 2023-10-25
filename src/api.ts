@@ -60,11 +60,12 @@ export class ApplePasswordManager {
 
         try {
           if ("payload" in response) {
-            if (
-              typeof response.payload === "object" &&
-              response.payload !== null
-            ) {
-              response = response.payload;
+            const payload = response.payload;
+
+            if (typeof payload === "object" && payload !== null) {
+              response = payload;
+            } else if (typeof payload === "string") {
+              // Do nothing
             } else {
               throw new Error(`Failed to parse unknown response: ${response}`);
             }
@@ -112,6 +113,7 @@ export class ApplePasswordManager {
               ),
             );
           }
+
           return resolve(response);
         } catch (e) {
           return reject(e);
@@ -394,9 +396,7 @@ export class ApplePasswordManager {
     return true;
   }
 
-  async getLoginNames(tabId: number, url: string) {
-    this.sendActiveTab(tabId, true);
-
+  async getLoginNamesForURL(tabId: number, url: string) {
     const capabilities = await this.getCapabilities();
 
     const { hostname } = new URL(url);
@@ -414,12 +414,12 @@ export class ApplePasswordManager {
     const response = await this._postMessage(
       Command.GetLoginNames4URL,
       {
-        url: hostname,
         tabId,
         frameId: 0,
+        url: hostname,
         payload: {
           QID: "CmdGetLoginNames4URL",
-          SMSG: JSON.stringify({
+          SMSG: {
             TID: utils.bitsToString(
               this.tid.toBits(),
               true,
@@ -430,7 +430,7 @@ export class ApplePasswordManager {
               true,
               capabilities.shouldUseBase64,
             ),
-          }),
+          },
         },
       },
       true,
@@ -448,6 +448,64 @@ export class ApplePasswordManager {
 
       default:
         throw new Error(`Invalid query response status: ${response.STATUS}`);
+    }
+  }
+
+  async getPasswordForLoginName(
+    tabId: number,
+    url: string,
+    loginName: { username: string; sites: string[] },
+  ) {
+    const capabilities = await this.getCapabilities();
+
+    const { hostname } = new URL(url);
+
+    const sdata = utils.encrypt(
+      sjcl.codec.utf8String.toBits(
+        JSON.stringify({
+          ACT: Action.Search,
+          URL: hostname,
+          USR: loginName.username,
+        }),
+      ),
+      this.encKey,
+    );
+
+    const response = await this._postMessage(
+      Command.GetPassword4LoginName,
+      {
+        tabId,
+        frameId: 0,
+        url: loginName.sites?.[0] ?? hostname,
+        payload: {
+          QID: "CmdGetPassword4LoginName",
+          SMSG: {
+            TID: utils.bitsToString(
+              this.tid.toBits(),
+              true,
+              capabilities.shouldUseBase64,
+            ),
+            SDATA: utils.bitsToString(
+              sdata,
+              true,
+              capabilities.shouldUseBase64,
+            ),
+          },
+        },
+      },
+      true,
+    );
+
+    switch (response.STATUS) {
+      case QueryStatus.Success:
+        return (response.Entries as any[]).map(({ USR, PWD, sites }) => ({
+          username: USR,
+          password: PWD,
+          sites,
+        }))[0];
+
+      default:
+        throw new Error(`Query response status error: ${response.STATUS}`);
     }
   }
 

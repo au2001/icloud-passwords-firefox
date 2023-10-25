@@ -20,8 +20,23 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
       getAPI().setChallengePIN(message.pake, message.pin);
       return true;
 
-    case "GET_LOGIN_NAMES":
-      return await getAPI().getLoginNames(message.tabId, message.url);
+    case "GET_LOGIN_NAMES_FOR_URL":
+      return await getAPI().getLoginNamesForURL(message.tabId, message.url);
+
+    case "GET_PASSWORD_FOR_LOGIN_NAME":
+      return await getAPI().getPasswordForLoginName(
+        message.tabId,
+        message.url,
+        message.loginName,
+      );
+
+    case "AUTO_FILL_PASSWORD":
+      const { password } = await getAPI().getPasswordForLoginName(
+        message.tabId,
+        message.url,
+        message.loginName,
+      );
+      console.log(password); // TODO
   }
 });
 

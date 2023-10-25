@@ -51,5 +51,13 @@ export enum Action {
 
 export enum QueryStatus {
   Success = 0,
+  GenericError = 1,
+  InvalidParam = 2,
   NoResults = 3,
+  FailedToDelete = 4,
+  FailedToUpdate = 5,
+  InvalidMessageFormat = 6,
+  DuplicateItem = 7,
+  UnknownAction = 8,
+  InvalidSession = 9,
 }
