@@ -41,6 +41,7 @@ export function calculateX(
   pin: string,
   shouldUseBase64: boolean,
 ) {
+  // Same as sjcl.keyexchange.srp.makeX but with sha256 instead of sha1
   return sjcl.bn.fromBits(
     sjcl.hash.sha256.hash(
       stringToBits(pake.s, shouldUseBase64).concat(
@@ -80,6 +81,7 @@ export function calculateM(
   pake: { s: string; B: string },
   sessionKey: sjcl.BitArray,
   tid: string,
+  a: sjcl.BigNumber,
   shouldUseBase64: boolean,
 ) {
   // TODO: Deobfuscate variable names
@@ -95,13 +97,13 @@ export function calculateM(
   c1.update(n);
   c1.update(i);
   c1.update(stringToBits(pake.s, shouldUseBase64));
-  c1.update(tid);
+  c1.update(GRP.g.powermod(a, GRP.N).toBits());
   c1.update(sjcl.bn.fromBits(stringToBits(pake.B, shouldUseBase64)).toBits());
   c1.update(sessionKey);
   const l = c1.finalize();
 
   const c2 = new sjcl.hash.sha256();
-  c2.update(tid);
+  c2.update(GRP.g.powermod(a, GRP.N).toBits());
   c2.update(l);
   c2.update(sessionKey);
 

@@ -34,7 +34,7 @@ export class ApplePasswordManager {
   constructor() {
     this.port = browser.runtime.connectNative("com.apple.passwordmanager");
 
-    // Setup SRP
+    // Setup SecureRemotePassword (SRP)
     this.tid = sjcl.bn.fromBits(utils.randomWords(4));
     this.a = sjcl.bn.fromBits(utils.randomWords(8));
   }
@@ -246,6 +246,7 @@ export class ApplePasswordManager {
             true,
             capabilities.shouldUseBase64,
           ),
+          this.a,
           capabilities.shouldUseBase64,
         );
 
@@ -312,7 +313,6 @@ export class ApplePasswordManager {
       );
     }
 
-    // TODO: Fix ErrCode 1
     if (pake2.ErrCode !== 0)
       throw new Error(`Message 3 contained an error: ${pake2.ErrCode}`);
 
