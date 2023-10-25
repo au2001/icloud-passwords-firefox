@@ -39,18 +39,17 @@ export enum MSGTypes {
   MSG3 = 3,
 }
 
-export type QID<T extends Command> = T extends Command.ChallengePIN
-  ? "m0" | "m2"
-  : T extends Command.GetLoginNames4URL
-  ? "CmdGetLoginNames4URL"
-  : T extends Command.GetPassword4LoginName
-  ? "CmdGetPassword4LoginName"
-  : T extends Command.SetPassword4LoginName_URL
-  ? "CmdSetPassword4LoginName_URL"
-  : T extends Command.NewAccount4URL
-  ? "CmdNewAccount4URL"
-  : T extends Command.GetOneTimeCodes
-  ? "CmdGetOneTimeCodes"
-  : T extends Command.DidFillOneTimeCode
-  ? "CmdDidFillOneTimeCode"
-  : null;
+export enum Action {
+  Unknown = -1,
+  Delete = 0,
+  Update = 1,
+  Search = 2,
+  AddNew = 3,
+  MaybeAdd = 4,
+  GhostSearch = 5,
+}
+
+export enum QueryStatus {
+  Success = 0,
+  NoResults = 3,
+}

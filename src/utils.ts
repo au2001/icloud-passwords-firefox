@@ -1,5 +1,5 @@
 import sjcl from "sjcl";
-import { GRP } from "./constants";
+import { GRP, KEY_LEN } from "./constants";
 
 export function randomWords(length: number) {
   const array = new Int32Array(length);
@@ -118,4 +118,17 @@ export function encrypt(data: sjcl.BitArray, encKey?: sjcl.BitArray) {
     sjcl.mode.gcm.encrypt(new sjcl.cipher.aes(encKey), data, salt),
     salt,
   );
+}
+
+export function decrypt(data: sjcl.BitArray, encKey?: sjcl.BitArray) {
+  if (!encKey) throw new Error("Called decrypt() without a session key!");
+
+  const salt = sjcl.bitArray.clamp(data, KEY_LEN);
+  data = sjcl.bitArray.bitSlice(data, KEY_LEN, undefined as unknown as number);
+
+  try {
+    return sjcl.mode.gcm.decrypt(new sjcl.cipher.aes(encKey), data, salt);
+  } catch (e) {
+    throw new Error(`Exception while decrypting message. ${e}`);
+  }
 }

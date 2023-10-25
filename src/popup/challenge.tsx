@@ -1,20 +1,20 @@
 import React from "react";
 import browser from "webextension-polyfill";
 
-export function ChallengeView() {
+interface Props {
+  setReady: () => void;
+}
+
+export function ChallengeView({ setReady }: Props) {
   const [pake, setPAKE] = React.useState<object>();
   const [pin, setPin] = React.useState("");
 
-  const requestChallengePin = async () => {
-    setPAKE(
-      await browser.runtime.sendMessage({
-        cmd: "REQUEST_CHALLENGE_PIN",
-      }),
-    );
-  };
-
   React.useEffect(() => {
-    requestChallengePin();
+    browser.runtime
+      .sendMessage({
+        cmd: "REQUEST_CHALLENGE_PIN",
+      })
+      .then(setPAKE);
   }, []);
 
   const handleChangePin = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -26,11 +26,15 @@ export function ChallengeView() {
 
     if (pake === undefined) return;
 
-    await browser.runtime.sendMessage({
+    const result = await browser.runtime.sendMessage({
       cmd: "SET_CHALLENGE_PIN",
       pake,
       pin,
     });
+
+    if (result !== true) throw result;
+
+    setReady();
   };
 
   return (

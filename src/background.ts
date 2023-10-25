@@ -7,7 +7,7 @@ const getAPI = () => (api ??= new ApplePasswordManager());
 getAPI().getCapabilities();
 
 browser.runtime.onMessage.addListener(async (message, sender) => {
-  sender;
+  sender; // TODO: Only allow valid sender
 
   switch (message.cmd) {
     case "IS_READY":
@@ -19,6 +19,9 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
     case "SET_CHALLENGE_PIN":
       getAPI().setChallengePIN(message.pake, message.pin);
       return true;
+
+    case "GET_LOGIN_NAMES":
+      return await getAPI().getLoginNames(message.tabId, message.url);
   }
 });
 

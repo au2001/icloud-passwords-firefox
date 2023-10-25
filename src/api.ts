@@ -2,20 +2,21 @@ import sjcl from "sjcl";
 import * as utils from "./utils";
 import browser, { Runtime } from "webextension-polyfill";
 import {
+  Action,
   BROWSER_NAME,
   Command,
   GRP,
   KEY_LEN,
   MSGTypes,
-  QID,
+  QueryStatus,
   SecretSessionVersion,
 } from "./constants";
 
 export class ApplePasswordManager {
-  private readonly port: Runtime.Port;
   private readonly tid: sjcl.BigNumber;
   private readonly a: sjcl.BigNumber;
 
+  private port?: Runtime.Port;
   private capabilities?: {
     shouldUseBase64: boolean;
     secretSessionVersion: SecretSessionVersion;
@@ -32,59 +33,107 @@ export class ApplePasswordManager {
   private encKey?: sjcl.BitArray;
 
   constructor() {
-    this.port = browser.runtime.connectNative("com.apple.passwordmanager");
-
     // Setup SecureRemotePassword (SRP)
     this.tid = sjcl.bn.fromBits(utils.randomWords(4));
     this.a = sjcl.bn.fromBits(utils.randomWords(8));
   }
 
-  private async _readResponse<T extends Command>(cmd: T, qid: QID<T>) {
-    return await new Promise((resolve) => {
-      const callback = (response: object) => {
+  private _connect() {
+    if (this.port === undefined) {
+      this.port = browser.runtime.connectNative("com.apple.passwordmanager");
+
+      this.port.onDisconnect.addListener((port) => {
+        if (this.port !== port) return;
+        this.port = undefined;
+      });
+    }
+
+    return this.port;
+  }
+
+  private async _readResponse<T extends Command>(cmd: T) {
+    return await new Promise((resolve, reject) => {
+      const port = this._connect();
+
+      const callback = async (response: object) => {
         if (!("cmd" in response) || response.cmd !== cmd) return;
 
-        if ("payload" in response) {
-          if (
-            typeof response.payload === "object" &&
-            response.payload !== null
-          ) {
-            response = response.payload;
-          } else {
-            console.warn("Failed to parse unknown response:", response);
-            return;
+        try {
+          if ("payload" in response) {
+            if (
+              typeof response.payload === "object" &&
+              response.payload !== null
+            ) {
+              response = response.payload;
+            } else {
+              throw new Error(`Failed to parse unknown response: ${response}`);
+            }
           }
+
+          if ("SMSG" in response) {
+            let smsg = response.SMSG;
+
+            if (typeof smsg === "string") {
+              try {
+                smsg = JSON.parse(smsg);
+              } catch (e) {
+                throw new Error(
+                  `Unable to decode SMSG from string: ${e} ${smsg}`,
+                );
+              }
+            }
+
+            if (typeof smsg !== "object" || smsg === null) {
+              throw new Error(`Failed to parse unknown response: ${response}`);
+            }
+
+            if (!("SDATA" in smsg) || typeof smsg.SDATA !== "string")
+              throw new Error(
+                "Missing or invalid SDATA field in SMSG message.",
+              );
+            if (!("TID" in smsg) || typeof smsg.TID !== "string")
+              throw new Error("Missing or invalid 'TID' field in SMSG object.");
+
+            const capabilities = await this.getCapabilities();
+            const tid = sjcl.bn.fromBits(
+              utils.stringToBits(smsg.TID, capabilities.shouldUseBase64),
+            );
+            if (!tid.equals(this.tid))
+              throw new Error(
+                "Received SMSG message meant for another session.",
+              );
+
+            response = JSON.parse(
+              sjcl.codec.utf8String.fromBits(
+                utils.decrypt(
+                  utils.stringToBits(smsg.SDATA, capabilities.shouldUseBase64),
+                  this.encKey,
+                ),
+              ),
+            );
+          }
+          return resolve(response);
+        } catch (e) {
+          return reject(e);
+        } finally {
+          port.onMessage.removeListener(callback);
         }
-
-        if (qid !== null && (!("QID" in response) || response.QID !== qid))
-          return;
-
-        this.port.onMessage.removeListener(callback);
-        resolve(response);
       };
 
-      this.port.onMessage.addListener(callback);
+      port.onMessage.addListener(callback);
     });
   }
 
   private async _postMessage<T extends Command>(
     cmd: T,
-    qid: QID<T>,
     body: object = {},
     expectResponse = true,
   ): Promise<any> {
-    const response = expectResponse ? this._readResponse(cmd, qid) : null;
+    const response = expectResponse ? this._readResponse(cmd) : null;
 
-    this.port.postMessage({
+    this._connect().postMessage({
       cmd,
-      ...(qid !== null
-        ? {
-            msg: JSON.stringify({
-              QID: qid,
-              ...body,
-            }),
-          }
-        : body),
+      ...body,
     });
 
     return await response;
@@ -100,8 +149,7 @@ export class ApplePasswordManager {
 
   async getCapabilities(refresh = false) {
     if (this.capabilities === undefined || refresh) {
-      const { capabilities } =
-        (await this._postMessage(Command.Hello, null)) ?? {};
+      const { capabilities } = (await this._postMessage(Command.Hello)) ?? {};
 
       this.capabilities = {
         shouldUseBase64: capabilities.shouldUseBase64 ?? false,
@@ -121,7 +169,6 @@ export class ApplePasswordManager {
   sendActiveTab(tabId: number, active: boolean) {
     this._postMessage(
       Command.TabEvent,
-      null,
       {
         tabId,
         event: active ? 1 : 0,
@@ -133,28 +180,31 @@ export class ApplePasswordManager {
   async requestChallengePIN() {
     const capabilities = await this.getCapabilities();
 
-    const response = await this._postMessage(Command.ChallengePIN, "m0", {
-      PAKE: utils.stringToBase64(
-        JSON.stringify({
-          TID: utils.bitsToString(
-            this.tid.toBits(),
-            true,
-            capabilities.shouldUseBase64,
-          ),
-          MSG: 0,
-          A: utils.bitsToString(
-            GRP.g.powermod(this.a, GRP.N).toBits(),
-            true,
-            capabilities.shouldUseBase64,
-          ),
-          VER: "1.0",
-          PROTO: [
-            SecretSessionVersion.SRPWithOldVerification,
-            SecretSessionVersion.SRPWithRFCVerification,
-          ],
-        }),
-      ),
-      HSTBRSR: BROWSER_NAME,
+    const response = await this._postMessage(Command.ChallengePIN, {
+      msg: {
+        QID: "m0",
+        PAKE: utils.stringToBase64(
+          JSON.stringify({
+            TID: utils.bitsToString(
+              this.tid.toBits(),
+              true,
+              capabilities.shouldUseBase64,
+            ),
+            MSG: 0,
+            A: utils.bitsToString(
+              GRP.g.powermod(this.a, GRP.N).toBits(),
+              true,
+              capabilities.shouldUseBase64,
+            ),
+            VER: "1.0",
+            PROTO: [
+              SecretSessionVersion.SRPWithOldVerification,
+              SecretSessionVersion.SRPWithRFCVerification,
+            ],
+          }),
+        ),
+        HSTBRSR: BROWSER_NAME,
+      },
     });
 
     let pake;
@@ -272,18 +322,21 @@ export class ApplePasswordManager {
         );
     }
 
-    const response = await this._postMessage(Command.ChallengePIN, "m2", {
-      PAKE: utils.stringToBase64(
-        JSON.stringify({
-          TID: utils.bitsToString(
-            this.tid.toBits(),
-            true,
-            capabilities.shouldUseBase64,
-          ),
-          MSG: 2,
-          ...msg,
-        }),
-      ),
+    const response = await this._postMessage(Command.ChallengePIN, {
+      msg: {
+        QID: "m2",
+        PAKE: utils.stringToBase64(
+          JSON.stringify({
+            TID: utils.bitsToString(
+              this.tid.toBits(),
+              true,
+              capabilities.shouldUseBase64,
+            ),
+            MSG: 2,
+            ...msg,
+          }),
+        ),
+      },
     });
 
     let pake2;
@@ -341,7 +394,71 @@ export class ApplePasswordManager {
     return true;
   }
 
-  close() {
-    this._postMessage(Command.EndOp, null);
+  async getLoginNames(tabId: number, url: string) {
+    this.sendActiveTab(tabId, true);
+
+    const capabilities = await this.getCapabilities();
+
+    const { hostname } = new URL(url);
+
+    const sdata = utils.encrypt(
+      sjcl.codec.utf8String.toBits(
+        JSON.stringify({
+          ACT: Action.GhostSearch,
+          URL: hostname,
+        }),
+      ),
+      this.encKey,
+    );
+
+    const response = await this._postMessage(
+      Command.GetLoginNames4URL,
+      {
+        url: hostname,
+        tabId,
+        frameId: 0,
+        payload: {
+          QID: "CmdGetLoginNames4URL",
+          SMSG: JSON.stringify({
+            TID: utils.bitsToString(
+              this.tid.toBits(),
+              true,
+              capabilities.shouldUseBase64,
+            ),
+            SDATA: utils.bitsToString(
+              sdata,
+              true,
+              capabilities.shouldUseBase64,
+            ),
+          }),
+        },
+      },
+      true,
+    );
+
+    switch (response.STATUS) {
+      case QueryStatus.Success:
+        return (response.Entries as any[]).map(({ USR, sites }) => ({
+          username: USR,
+          sites,
+        }));
+
+      case QueryStatus.NoResults:
+        return [];
+
+      default:
+        throw new Error(`Invalid query response status: ${response.STATUS}`);
+    }
+  }
+
+  async close() {
+    const port = this.port;
+    if (port === undefined) return;
+
+    this._postMessage(Command.EndOp);
+
+    await new Promise<void>((resolve) => {
+      port.onDisconnect.addListener(() => resolve());
+    });
   }
 }

@@ -1,6 +1,7 @@
 import React from "react";
 import browser from "webextension-polyfill";
 import { ChallengeView } from "./challenge";
+import { ListView } from "./list";
 
 export function Popup() {
   const [ready, setReady] = React.useState<boolean>();
@@ -15,8 +16,9 @@ export function Popup() {
 
   return (
     <>
-      {ready === false && <ChallengeView />}
-      {ready === true && <ChallengeView />}
+      {ready === false && <ChallengeView setReady={() => setReady(true)} />}
+      {ready === true && <ListView />}
+      {ready === undefined && <p>Loading...</p>}
     </>
   );
 }
