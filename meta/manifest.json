@@ -15,7 +15,7 @@
     "32": "./images/PasswordsExtensionIcon_32.png",
     "128": "./images/PasswordsExtensionIcon_128.png"
   },
-  "permissions": ["nativeMessaging", "activeTab"],
+  "permissions": ["nativeMessaging", "activeTab", "scripting"],
   "background": {
     "scripts": ["./background.js"]
   },
