@@ -1,6 +1,6 @@
 import { ChangeEvent, useEffect, useState } from "react";
 import browser from "webextension-polyfill";
-import { Loading } from "./loading";
+import { LoadingView } from "./loading";
 import styles from "./challenge.module.scss";
 
 interface Props {
@@ -69,7 +69,7 @@ export function ChallengeView({ setReady }: Props) {
     setPin(pin);
   };
 
-  if (pake === undefined) return <Loading />;
+  if (pake === undefined) return <LoadingView />;
 
   return (
     <div className={styles.challenge}>

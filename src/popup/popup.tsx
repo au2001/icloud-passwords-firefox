@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import browser from "webextension-polyfill";
 import { ChallengeView } from "./challenge";
 import { PasswordsView } from "./passwords";
-import { Loading } from "./loading";
+import { LoadingView } from "./loading";
 
-export function Popup() {
+export function PopupView() {
   const [ready, setReady] = useState<boolean>();
 
   useEffect(() => {
@@ -15,7 +15,7 @@ export function Popup() {
       .then(setReady);
   }, []);
 
-  if (ready === undefined) return <Loading />;
+  if (ready === undefined) return <LoadingView />;
 
   return (
     <>

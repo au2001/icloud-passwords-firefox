@@ -1,0 +1,21 @@
+@import "./index.scss";
+
+.error {
+  margin: 0;
+  padding: 20px;
+  text-align: center;
+  color: $color-text-error;
+
+  > h1 {
+    // TODO: $font-in-content-heading-large
+    font-size: 22px;
+    line-height: 140%;
+    font-weight: 400;
+
+    margin: 0;
+  }
+
+  > p {
+    margin: 0;
+  }
+}

@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import browser from "webextension-polyfill";
 import { useCurrentTab } from "./hooks";
-import { Loading } from "./loading";
+import { LoadingView } from "./loading";
 import styles from "./passwords.module.scss";
 import { KeyIcon } from "./icons/key";
+import { ErrorCode, ErrorView } from "./error";
 
 interface LoginName {
   username: string;
@@ -13,7 +14,7 @@ interface LoginName {
 export function PasswordsView() {
   const tab = useCurrentTab();
   const [loginNames, setLoginNames] = useState<LoginName[]>();
-  const [error, setError] = useState<unknown>();
+  const [error, setError] = useState<ErrorCode>();
 
   const fetchLoginNames = async (tabId: number, url: string) => {
     setLoginNames(undefined);
@@ -29,7 +30,7 @@ export function PasswordsView() {
       });
 
       setLoginNames(loginNames);
-    } catch (e) {
+    } catch (e: any) {
       setError(e);
     }
   };
@@ -37,6 +38,7 @@ export function PasswordsView() {
   useEffect(() => {
     if (tab?.id === undefined || tab?.url === undefined) return;
 
+    // Refresh passwords list every time the URL changes
     fetchLoginNames(tab.id, tab.url);
   }, [tab?.url]);
 
@@ -54,7 +56,7 @@ export function PasswordsView() {
         url: tab.url,
         loginName,
       });
-    } catch (e) {
+    } catch (e: any) {
       setError(e);
     }
   };
@@ -67,16 +69,19 @@ export function PasswordsView() {
         cmd: "LOCK",
       });
 
+      // We don't want to show the challenge view right away, so we close the extension instead
+      // Next time the user opens the extension, they will see the challenge view automatically
       window.close();
-    } catch (e) {
+    } catch (e: any) {
       setError(e);
     }
   };
 
-  if (tab?.id === undefined || tab?.url === undefined) return <Loading />;
-  if (new URL(tab.url).hostname === "") return <p>Not compatible.</p>;
-  if (loginNames === undefined) return <Loading />;
-  if (loginNames.length === 0) return <p>No password.</p>;
+  if (error !== undefined) return <ErrorView code={error} />
+  if (tab?.id === undefined || tab?.url === undefined) return <LoadingView />;
+  if (new URL(tab.url).hostname === "")
+    return <ErrorView code={ErrorCode.URL_NOT_COMPATIBLE} />;
+  if (loginNames === undefined) return <LoadingView />;
 
   return (
     <div className={styles.passwords}>
@@ -94,25 +99,35 @@ export function PasswordsView() {
         </a>
       </header>
 
-      <h2>Choose a saved password to use:</h2>
+      {loginNames.length > 0 ? (
+        <>
+          <h2>Choose a saved password to use:</h2>
 
-      <ul>
-        {loginNames?.map((loginName, i) => (
-          <li
-            key={i}
-            onClick={(e) => {
-              e.preventDefault();
-              handleAutoFillPassword(loginName);
-            }}
-          >
-            <KeyIcon />
-            <div>
-              <span>{loginName.username}</span>
-              <span>{loginName.sites[0] ?? ""}</span>
-            </div>
-          </li>
-        ))}
-      </ul>
+          <ul>
+            {loginNames?.map((loginName, i) => (
+              <li
+                key={i}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleAutoFillPassword(loginName);
+                }}
+              >
+                <KeyIcon />
+                <div>
+                  <span>{loginName.username}</span>
+                  <span>{loginName.sites[0] ?? ""}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <p>
+          <br />
+          No passwords saved on this website.<br />
+          <br />
+        </p>
+      )}
     </div>
   );
 }
