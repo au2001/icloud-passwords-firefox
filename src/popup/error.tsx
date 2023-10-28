@@ -17,7 +17,12 @@ export function ErrorView({ code }: Props) {
         return <>iCloud Passwords cannot save passwords on this website.</>;
 
       case ErrorCode.LOADING_TIMED_OUT:
-        return <>iCloud Passwords failed to respond in time. Please try reinstalling the extension.</>;
+        return (
+          <>
+            iCloud Passwords failed to respond in time. Please try reinstalling
+            the extension.
+          </>
+        );
 
       default:
         console.error(code);

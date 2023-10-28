@@ -1,0 +1,98 @@
+@import "./index.scss";
+
+.generator {
+  > header {
+    position: sticky;
+    top: 0;
+
+    display: flex;
+    height: 30px;
+    padding: 0 8px;
+    background-color: $color-background-2;
+    color: $color-text-secondary;
+
+    gap: 8px;
+    align-items: center;
+
+    > img {
+      height: 20px;
+      width: 20px;
+    }
+
+    > h1 {
+      // TODO: $font-in-content-body-default
+      font-size: 15px;
+      line-height: 150%;
+      font-weight: 400;
+
+      margin: 0;
+      flex: 1;
+    }
+  }
+
+  > div {
+    padding: 20px;
+
+    > h2 {
+      // TODO: $font-in-content-body-default
+      font-size: 15px;
+      line-height: 150%;
+      font-weight: 400;
+      color: $color-text-primary;
+
+      margin: 0;
+      margin-bottom: 10px;
+    }
+
+    > input {
+      color: inherit;
+
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+
+      // TODO: $font-in-content-title-default
+      font-size: 26px;
+      line-height: 140%;
+      font-weight: 300;
+
+      font-variant-numeric: slashed-zero;
+      text-align: center;
+      letter-spacing: 2px;
+
+      background-color: rgba($color-background-2, 0.3);
+      border: 1px solid $color-background-2;
+      border-radius: 5px;
+      outline: none;
+    }
+
+    > div {
+      display: flex;
+      gap: 20px;
+      margin-top: 20px;
+
+      > button {
+        flex: 1;
+        height: 30px;
+
+        background-color: $color-background-2;
+        color: $color-text-primary;
+        border: none;
+        border-radius: 3px;
+
+        text-align: center;
+        cursor: pointer;
+
+        // TODO: $font-in-content-body-small-bold
+        font-size: 13px;
+        line-height: 150%;
+        font-weight: 600;
+
+        &:first-child {
+          background-color: $color-accent-primary;
+          color: $color-button-primary;
+        }
+      }
+    }
+  }
+}

@@ -27,7 +27,7 @@
     }
 
     > input {
-      all: unset;
+      color: inherit;
 
       margin-top: 20px;
       width: 100%;
@@ -38,14 +38,15 @@
       font-size: 26px;
       line-height: 140%;
       font-weight: 300;
-      font-variant-numeric: tabular-nums;
 
+      font-variant-numeric: tabular-nums;
       text-align: center;
       letter-spacing: 8px;
 
       background-color: rgba($color-background-2, 0.3);
       border: 1px solid $color-background-2;
       border-radius: 5px;
+      outline: none;
 
       &:not(:disabled):focus {
         border-color: $color-accent-primary;

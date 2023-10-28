@@ -1,6 +1,7 @@
-import { ChangeEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import browser from "webextension-polyfill";
 import { LoadingView } from "./loading";
+import { ErrorCode, ErrorView } from "./error";
 import styles from "./challenge.module.scss";
 
 interface Props {
@@ -10,7 +11,7 @@ interface Props {
 export function ChallengeView({ setReady }: Props) {
   const [pake, setPAKE] = useState<object>();
   const [pin, setPin] = useState("");
-  const [error, setError] = useState<unknown>();
+  const [error, setError] = useState<ErrorCode>();
 
   const requestChallengePin = async () => {
     try {
@@ -19,7 +20,7 @@ export function ChallengeView({ setReady }: Props) {
       });
 
       setPAKE(pake);
-    } catch (e) {
+    } catch (e: any) {
       setError(e);
       setPAKE(undefined);
     }
@@ -38,8 +39,8 @@ export function ChallengeView({ setReady }: Props) {
         if (result !== true) throw result;
 
         setReady();
-      } catch (e) {
-        setError(error);
+      } catch (e: any) {
+        setError(e);
         await requestChallengePin();
         setPin("");
       }
@@ -56,20 +57,16 @@ export function ChallengeView({ setReady }: Props) {
     setChallengePin(pin, pake);
   }, [pake, pin]);
 
-  const handleChangePin = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleChangePin = (pin: string) => {
     setError(undefined);
 
-    const pin = e.target.value.replace(/\D/g, "");
-
-    if (pin.length > 6) {
-      e.preventDefault();
-      return;
-    }
-
+    pin = pin.replace(/\D/g, "");
+    if (pin.length > 6) return;
     setPin(pin);
   };
 
   if (pake === undefined) return <LoadingView />;
+  if (error !== undefined) return <ErrorView code={error} />;
 
   return (
     <div className={styles.challenge}>
@@ -83,7 +80,7 @@ export function ChallengeView({ setReady }: Props) {
         <input
           type="text"
           value={pin}
-          onChange={handleChangePin}
+          onChange={(e) => handleChangePin(e.target.value)}
           autoFocus
           disabled={pin.length === 6}
         />

@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import browser from "webextension-polyfill";
 import { useCurrentTab } from "./hooks";
 import { LoadingView } from "./loading";
-import styles from "./passwords.module.scss";
-import { KeyIcon } from "./icons/key";
 import { ErrorCode, ErrorView } from "./error";
+import { KeyIcon } from "./icons/key";
+import styles from "./passwords.module.scss";
 
 interface LoginName {
   username: string;
@@ -77,7 +78,7 @@ export function PasswordsView() {
     }
   };
 
-  if (error !== undefined) return <ErrorView code={error} />
+  if (error !== undefined) return <ErrorView code={error} />;
   if (tab?.id === undefined || tab?.url === undefined) return <LoadingView />;
   if (new URL(tab.url).hostname === "")
     return <ErrorView code={ErrorCode.URL_NOT_COMPATIBLE} />;
@@ -124,10 +125,17 @@ export function PasswordsView() {
       ) : (
         <p>
           <br />
-          No passwords saved on this website.<br />
+          No passwords saved on this website.
+          <br />
           <br />
         </p>
       )}
+
+      <hr />
+
+      <p>
+        <Link to="/generate">Create Strong Password...</Link>
+      </p>
     </div>
   );
 }

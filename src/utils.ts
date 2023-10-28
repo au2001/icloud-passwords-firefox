@@ -3,7 +3,7 @@ import { GRP, KEY_LEN } from "./constants";
 
 export function randomWords(length: number) {
   const array = new Int32Array(length);
-  self.crypto.getRandomValues(array);
+  crypto.getRandomValues(array);
   return Array.from(array);
 }
 

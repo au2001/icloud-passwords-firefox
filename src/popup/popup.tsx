@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { HashRouter, Route, Routes } from "react-router-dom";
 import browser from "webextension-polyfill";
 import { ChallengeView } from "./challenge";
 import { PasswordsView } from "./passwords";
+import { GeneratorView } from "./generator";
 import { LoadingView } from "./loading";
 
 export function PopupView() {
@@ -20,7 +22,12 @@ export function PopupView() {
   return (
     <>
       {ready ? (
-        <PasswordsView />
+        <HashRouter>
+          <Routes>
+            <Route index Component={PasswordsView} />
+            <Route path="/generate" Component={GeneratorView} />
+          </Routes>
+        </HashRouter>
       ) : (
         <ChallengeView setReady={() => setReady(true)} />
       )}
