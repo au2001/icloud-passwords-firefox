@@ -1,12 +1,13 @@
-import React from "react";
+import { useEffect, useState } from "react";
 import browser from "webextension-polyfill";
 import { ChallengeView } from "./challenge";
 import { ListView } from "./list";
+import { Loading } from "./loading";
 
 export function Popup() {
-  const [ready, setReady] = React.useState<boolean>();
+  const [ready, setReady] = useState<boolean>();
 
-  React.useEffect(() => {
+  useEffect(() => {
     browser.runtime
       .sendMessage({
         cmd: "IS_READY",
@@ -14,11 +15,11 @@ export function Popup() {
       .then(setReady);
   }, []);
 
+  if (ready === undefined) return <Loading />;
+
   return (
     <>
-      {ready === false && <ChallengeView setReady={() => setReady(true)} />}
-      {ready === true && <ListView />}
-      {ready === undefined && <p>Loading...</p>}
+      {ready ? <ListView /> : <ChallengeView setReady={() => setReady(true)} />}
     </>
   );
 }

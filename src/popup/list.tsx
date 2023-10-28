@@ -1,6 +1,7 @@
-import React from "react";
+import { useEffect, useState } from "react";
 import browser from "webextension-polyfill";
 import { useCurrentTab } from "./hooks";
+import { Loading } from "./loading";
 
 interface LoginName {
   username: string;
@@ -9,9 +10,9 @@ interface LoginName {
 
 export function ListView() {
   const tab = useCurrentTab();
-  const [loginNames, setLoginNames] = React.useState<LoginName[]>();
+  const [loginNames, setLoginNames] = useState<LoginName[]>();
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (tab?.id === undefined || tab?.url === undefined) return;
 
     browser.runtime
@@ -41,7 +42,7 @@ export function ListView() {
     tab?.url === undefined ||
     loginNames === undefined
   ) {
-    return <p>Loading...</p>;
+    return <Loading />;
   }
 
   return (

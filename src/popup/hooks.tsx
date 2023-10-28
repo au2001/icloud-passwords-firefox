@@ -1,15 +1,15 @@
-import React from "react";
+import { useEffect, useState } from "react";
 import browser from "webextension-polyfill";
 
 export function useCurrentTab() {
-  const [window, setWindow] = React.useState<browser.Windows.Window>();
-  const [tab, setTab] = React.useState<browser.Tabs.Tab>();
+  const [window, setWindow] = useState<browser.Windows.Window>();
+  const [tab, setTab] = useState<browser.Tabs.Tab>();
 
-  React.useEffect(() => {
+  useEffect(() => {
     browser.windows.getCurrent().then(setWindow);
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (window?.id === undefined) return;
 
     browser.tabs
@@ -33,7 +33,7 @@ export function useCurrentTab() {
     return () => browser.tabs.onActivated.removeListener(listener);
   }, [window]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (tab?.id === undefined || tab.id === browser.tabs.TAB_ID_NONE) return;
 
     const listener = (
