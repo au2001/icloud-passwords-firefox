@@ -10,7 +10,6 @@ interface Props {
 export function ChallengeView({ setReady }: Props) {
   const [pake, setPAKE] = useState<object>();
   const [pin, setPin] = useState("");
-  const [unlocking, setUnlocking] = useState(false);
   const [error, setError] = useState<unknown>();
 
   const requestChallengePin = async () => {
@@ -27,8 +26,6 @@ export function ChallengeView({ setReady }: Props) {
   };
 
   const setChallengePin = async (pin: string, pake: object) => {
-    setUnlocking(true);
-
     // Setting the challenge PIN freezes the UI, so we delay it by 1 render frame for the input to have time to update one more time
     setTimeout(async () => {
       try {
@@ -45,7 +42,6 @@ export function ChallengeView({ setReady }: Props) {
         setError(error);
         await requestChallengePin();
         setPin("");
-        setUnlocking(false);
       }
     }, 0);
   };
@@ -89,7 +85,7 @@ export function ChallengeView({ setReady }: Props) {
           value={pin}
           onChange={handleChangePin}
           autoFocus
-          disabled={unlocking}
+          disabled={pin.length === 6}
         />
       </div>
     </div>

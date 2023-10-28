@@ -59,6 +59,20 @@ export function PasswordsView() {
     }
   };
 
+  const handleLock = async () => {
+    setError(undefined);
+
+    try {
+      await browser.runtime.sendMessage({
+        cmd: "LOCK",
+      });
+
+      window.close();
+    } catch (e) {
+      setError(e);
+    }
+  };
+
   if (tab?.id === undefined || tab?.url === undefined) return <Loading />;
   if (new URL(tab.url).hostname === "") return <p>Not compatible.</p>;
   if (loginNames === undefined) return <Loading />;
@@ -69,7 +83,15 @@ export function PasswordsView() {
       <header>
         <img src="/images/PasswordsExtensionIcon_32.png" alt="" />
         <h1>iCloud Passwords</h1>
-        <a href="#">Lock</a>
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            handleLock();
+          }}
+        >
+          Lock
+        </a>
       </header>
 
       <h2>Choose a saved password to use:</h2>

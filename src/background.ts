@@ -15,6 +15,13 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
       case "IS_READY":
         return api?.ready ?? false;
 
+      case "LOCK":
+        if (!api?.ready) return false;
+
+        api.close();
+        api = null;
+        return true;
+
       case "REQUEST_CHALLENGE_PIN":
         return await getAPI().requestChallengePIN();
 
