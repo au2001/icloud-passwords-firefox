@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import browser from "webextension-polyfill";
 import { ChallengeView } from "./challenge";
-import { ListView } from "./list";
+import { PasswordsView } from "./passwords";
 import { Loading } from "./loading";
 
 export function Popup() {
@@ -19,7 +19,11 @@ export function Popup() {
 
   return (
     <>
-      {ready ? <ListView /> : <ChallengeView setReady={() => setReady(true)} />}
+      {ready ? (
+        <PasswordsView />
+      ) : (
+        <ChallengeView setReady={() => setReady(true)} />
+      )}
     </>
   );
 }

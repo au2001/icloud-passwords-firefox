@@ -1,0 +1,59 @@
+@import "./index.scss";
+
+.challenge {
+  display: flex;
+  margin: 20px;
+  gap: 20px;
+
+  > img {
+    width: 48px;
+    height: 48px;
+  }
+
+  > div {
+    > h1 {
+      // TODO: $font-in-content-heading-default
+      font-size: 17px;
+      line-height: 140%;
+      font-weight: 600;
+
+      margin: 0;
+    }
+
+    > p {
+      color: $color-text-secondary;
+
+      margin: 0;
+    }
+
+    > input {
+      all: unset;
+
+      margin-top: 20px;
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+
+      // TODO: $font-in-content-title-default
+      font-size: 26px;
+      line-height: 140%;
+      font-weight: 300;
+      font-variant-numeric: tabular-nums;
+
+      text-align: center;
+      letter-spacing: 8px;
+
+      background-color: rgba($color-background-2, 0.3);
+      border: 1px solid $color-background-2;
+      border-radius: 5px;
+
+      &:not(:disabled):focus {
+        border-color: $color-accent-primary;
+      }
+
+      &:disabled {
+        color: $color-text-disabled;
+      }
+    }
+  }
+}

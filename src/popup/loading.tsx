@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import styles from "./styles.module.scss";
+import styles from "./loading.module.scss";
 
 export function Loading() {
   const [count, setCount] = useState(0);
