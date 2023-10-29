@@ -13,6 +13,7 @@ import {
 } from "./constants";
 
 export class ApplePasswordManager {
+  private readonly events = new EventTarget();
   private readonly tid: sjcl.BigNumber;
   private readonly a: sjcl.BigNumber;
 
@@ -43,6 +44,26 @@ export class ApplePasswordManager {
       this.port = browser.runtime.connectNative("com.apple.passwordmanager");
 
       this.port.onDisconnect.addListener((port) => {
+        if (browser.runtime.lastError) {
+          let error = browser.runtime.lastError.message;
+          switch (error) {
+            case "Specified native messaging host not found.":
+              error = "MISSING_CONNECT_NATIVE_HOST";
+              break;
+
+            case "Access to the specified native messaging host is forbidden.":
+              error = "MISSING_CONNECT_NATIVE_PERMISSION";
+              break;
+          }
+
+          this.events.dispatchEvent(
+            new CustomEvent("error", {
+              cancelable: false,
+              detail: error,
+            }),
+          );
+        }
+
         if (this.port !== port) return;
         this.port = undefined;
       });
@@ -53,7 +74,7 @@ export class ApplePasswordManager {
 
   private async _readResponse<T extends Command>(cmd: T) {
     return await new Promise((resolve, reject) => {
-      const port = this._connect();
+      let port: browser.Runtime.Port;
 
       const callback = async (response: object) => {
         if (!("cmd" in response) || response.cmd !== cmd) return;
@@ -110,10 +131,19 @@ export class ApplePasswordManager {
         } catch (e) {
           return reject(e);
         } finally {
+          this.events.removeEventListener("error", callback);
           port.onMessage.removeListener(callback);
         }
       };
 
+      const onError = (event: Event) => {
+        this.events.removeEventListener("error", callback);
+        port.onMessage.removeListener(callback);
+        return reject((event as CustomEvent).detail ?? event);
+      };
+
+      this.events.addEventListener("error", onError);
+      port = this._connect();
       port.onMessage.addListener(callback);
     });
   }
@@ -123,7 +153,28 @@ export class ApplePasswordManager {
     body: object = {},
     expectResponse = true,
   ): Promise<any> {
-    const response = expectResponse ? this._readResponse(cmd) : null;
+    let response;
+
+    if (expectResponse) {
+      response = this._readResponse(cmd);
+    } else {
+      response = new Promise<void>((resolve, reject) => {
+        let timeout: NodeJS.Timeout;
+
+        const onError = (event: Event) => {
+          this.events.removeEventListener("error", onError);
+          clearTimeout(timeout);
+          return reject((event as CustomEvent).detail ?? event);
+        };
+
+        timeout = setTimeout(() => {
+          this.events.removeEventListener("error", onError);
+          resolve();
+        }, 200);
+
+        this.events.addEventListener("error", onError);
+      });
+    }
 
     this._connect().postMessage({
       cmd,
@@ -160,8 +211,8 @@ export class ApplePasswordManager {
     return this.capabilities;
   }
 
-  sendActiveTab(tabId: number, active: boolean) {
-    this._postMessage(
+  async sendActiveTab(tabId: number, active: boolean) {
+    await this._postMessage(
       Command.TabEvent,
       {
         tabId,
@@ -395,30 +446,22 @@ export class ApplePasswordManager {
       this.encKey,
     );
 
-    const response = await this._postMessage(
-      Command.GetLoginNames4URL,
-      {
-        tabId,
-        frameId: 0,
-        url: hostname,
-        payload: {
-          QID: "CmdGetLoginNames4URL",
-          SMSG: {
-            TID: utils.bitsToString(
-              this.tid.toBits(),
-              true,
-              capabilities.shouldUseBase64,
-            ),
-            SDATA: utils.bitsToString(
-              sdata,
-              true,
-              capabilities.shouldUseBase64,
-            ),
-          },
+    const response = await this._postMessage(Command.GetLoginNames4URL, {
+      tabId,
+      frameId: 0,
+      url: hostname,
+      payload: {
+        QID: "CmdGetLoginNames4URL",
+        SMSG: {
+          TID: utils.bitsToString(
+            this.tid.toBits(),
+            true,
+            capabilities.shouldUseBase64,
+          ),
+          SDATA: utils.bitsToString(sdata, true, capabilities.shouldUseBase64),
         },
       },
-      true,
-    );
+    });
 
     switch (response.STATUS) {
       case QueryStatus.Success:
@@ -479,30 +522,22 @@ export class ApplePasswordManager {
       this.encKey,
     );
 
-    const response = await this._postMessage(
-      Command.GetPassword4LoginName,
-      {
-        tabId,
-        frameId: 0,
-        url: loginName.sites?.[0] ?? hostname,
-        payload: {
-          QID: "CmdGetPassword4LoginName",
-          SMSG: {
-            TID: utils.bitsToString(
-              this.tid.toBits(),
-              true,
-              capabilities.shouldUseBase64,
-            ),
-            SDATA: utils.bitsToString(
-              sdata,
-              true,
-              capabilities.shouldUseBase64,
-            ),
-          },
+    const response = await this._postMessage(Command.GetPassword4LoginName, {
+      tabId,
+      frameId: 0,
+      url: loginName.sites?.[0] ?? hostname,
+      payload: {
+        QID: "CmdGetPassword4LoginName",
+        SMSG: {
+          TID: utils.bitsToString(
+            this.tid.toBits(),
+            true,
+            capabilities.shouldUseBase64,
+          ),
+          SDATA: utils.bitsToString(sdata, true, capabilities.shouldUseBase64),
         },
       },
-      true,
-    );
+    });
 
     switch (response.STATUS) {
       case QueryStatus.Success:

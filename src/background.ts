@@ -5,8 +5,6 @@ import { autoFillPassword } from "./auto-fill";
 let api: ApplePasswordManager | null = null;
 const getAPI = () => (api ??= new ApplePasswordManager());
 
-getAPI().getCapabilities();
-
 browser.runtime.onMessage.addListener(async (message, sender) => {
   try {
     sender; // TODO: Only allow valid sender
@@ -21,8 +19,9 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
       case "LOCK":
         if (!api?.ready) return false;
 
-        api.close();
+        await api.close();
         api = null;
+
         return {
           success: true,
           locked: true,

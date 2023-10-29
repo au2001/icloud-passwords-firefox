@@ -8,7 +8,7 @@ interface Props {
 
 export function ErrorView({ error }: Props) {
   const message = useMemo(() => {
-    const [code, param] = error.split(":", 2);
+    const [code, param] = error.toString().split(":", 2);
 
     switch (code) {
       case "AUTO_FILL_NO_PASSWORD_FIELD":
@@ -48,6 +48,69 @@ export function ErrorView({ error }: Props) {
           <>
             iCloud Passwords failed to respond in time. Please try reinstalling
             the extension.
+          </>
+        );
+
+      case "MISSING_CONNECT_NATIVE_HOST":
+        if (navigator.platform === "MacIntel") {
+          return (
+            <>
+              iCloud Passwords requires macOS Sonoma or later to be installed.
+              Please upgrade to be able to use this extension.
+            </>
+          );
+        } else {
+          let downloadUrl: string | undefined;
+
+          let windowsVersion = /\(Windows\s*\w*\s*(\d*)\.(\d*)/i.exec(
+            navigator.userAgent,
+          );
+          if (windowsVersion !== null && windowsVersion.length !== 3) {
+            const major = parseInt(windowsVersion?.[1], 10),
+              minor = parseInt(windowsVersion?.[2], 10);
+
+            if (major >= 10) {
+              // Windows 10+
+              downloadUrl = "ms-windows-store://pdp/?productid=9PKTQ5699M62";
+            } else if (major >= 6 && minor >= 1) {
+              // Windows 7-8 (NT 6.1 - 6.3)
+              downloadUrl = "https://support.apple.com/kb/DL1455";
+            }
+          }
+
+          if (downloadUrl !== undefined) {
+            return (
+              <>
+                iCloud Passwords requires iCloud for Windows to be installed.
+                You can download it{" "}
+                <a href={downloadUrl} target="_blank" rel="noopener noreferrer">
+                  here
+                </a>
+                .
+              </>
+            );
+          } else {
+            return (
+              <>
+                iCloud Passwords is designed to run on Windows 10 or later.
+                Please upgrade to be able to use this extension.
+              </>
+            );
+          }
+        }
+
+      case "MISSING_CONNECT_NATIVE_PERMISSION":
+        return (
+          <>
+            The setup process could not complete successfully. Follow{" "}
+            <a
+              href="https://github.com/au2001/icloud-passwords-firefox#README"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              these instructions
+            </a>{" "}
+            to use the extension.
           </>
         );
 
@@ -98,7 +161,7 @@ export function ErrorView({ error }: Props) {
       case "UNKNOWN_RESPONSE_PAYLOAD":
       case "UNKNOWN_RESPONSE_SMSG":
       default:
-        console.error(code, param);
+        console.error(error);
         return (
           <>
             An unknown error occurred. Make sure you have the latest version of
