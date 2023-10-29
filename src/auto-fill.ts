@@ -1,26 +1,56 @@
 export function autoFillPassword(username: string, password: string) {
-  let passwordInputs = document.querySelectorAll<HTMLInputElement>(
-    "input[autocomplete=current-password]",
-  );
+  let passwordInputs = Array.from(
+    document.querySelectorAll<HTMLInputElement>(
+      "input[autocomplete=current-password]",
+    ),
+  ).filter((input) => input.checkVisibility());
 
   if (passwordInputs.length === 0) {
-    passwordInputs = document.querySelectorAll<HTMLInputElement>(
-      "input[type=password]",
-    );
+    passwordInputs = Array.from(
+      document.querySelectorAll<HTMLInputElement>("input[type=password]"),
+    ).filter((input) => input.checkVisibility());
   }
 
   if (passwordInputs.length === 0) {
     throw new Error(`No password input field found on ${window.location}`);
   } else if (passwordInputs.length > 1) {
-    throw new Error(
-      `Multiple password input fields found on ${window.location}`,
-    );
+    console.warn(`Multiple password input fields found on ${window.location}`);
   }
 
-  const passwordInput = passwordInputs.item(0);
+  const passwordInput = passwordInputs[0];
 
-  let usernameInput: Element = passwordInput;
-  do {
+  const isUsernameInput = (input: HTMLInputElement) => {
+    if (!["text", "email", undefined].includes(input.type)) return false;
+    if (!input.checkVisibility()) return false;
+
+    const types = [
+      "email",
+      "e-mail",
+      "mail",
+      "username",
+      "user",
+      "login",
+      "account",
+    ];
+
+    const fields = [
+      input.autocomplete,
+      input.name,
+      input.id,
+      input.className,
+      input.placeholder,
+      input.ariaLabel,
+      input.getAttribute("ng-model"),
+    ];
+
+    return fields.some(
+      (field) =>
+        field && types.some((type) => field.toLowerCase().includes(type)),
+    );
+  };
+
+  let usernameInput: Element | null = passwordInput;
+  outer: do {
     if (usernameInput.lastElementChild !== null) {
       usernameInput = usernameInput.lastElementChild;
       continue;
@@ -28,7 +58,9 @@ export function autoFillPassword(username: string, password: string) {
 
     while (usernameInput.previousElementSibling === null) {
       if (usernameInput.parentElement === null) {
-        throw new Error(`No username input field found on ${window.location}`);
+        console.warn(`No username input field found on ${window.location}`);
+        usernameInput = null;
+        break outer;
       }
       usernameInput = usernameInput.parentElement;
     }
@@ -37,17 +69,17 @@ export function autoFillPassword(username: string, password: string) {
   } while (
     usernameInput.tagName !== "INPUT" ||
     !(usernameInput instanceof HTMLInputElement) ||
-    (usernameInput.type !== "email" &&
-      !usernameInput.autocomplete.includes("email") &&
-      !usernameInput.autocomplete.includes("username"))
+    !isUsernameInput(usernameInput)
   );
 
   // Necessary for some JS libraries like React to detect the value correctly
   // See https://stackoverflow.com/a/46012210
-  function setNativeValue(input: HTMLInputElement, value: string) {
+  const setNativeValue = (input: HTMLInputElement, value: string) => {
+    input.value = value;
+
     // React <= 15.5
     input.dispatchEvent(
-      Object.assign(new Event("input", { bubbles: true }), {
+      Object.assign(new InputEvent("input", { bubbles: true }), {
         simulated: true,
         value,
       }),
@@ -68,8 +100,11 @@ export function autoFillPassword(username: string, password: string) {
     nativeInputValueSetter.call(input, value);
 
     input.dispatchEvent(new Event("change", { bubbles: true }));
-  }
 
-  setNativeValue(usernameInput, username);
+    // Angular
+    input.dispatchEvent(new Event("blur", { bubbles: true }));
+  };
+
+  if (usernameInput !== null) setNativeValue(usernameInput, username);
   setNativeValue(passwordInput, password);
 }
