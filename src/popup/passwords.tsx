@@ -5,6 +5,7 @@ import { useCurrentTab } from "./hooks";
 import { LoadingView } from "./loading";
 import { ErrorCode, ErrorView } from "./error";
 import { KeyIcon } from "./icons/key";
+import { CopyIcon } from "./icons/copy";
 import styles from "./passwords.module.scss";
 
 interface LoginName {
@@ -43,7 +44,10 @@ export function PasswordsView() {
     fetchLoginNames(tab.id, tab.url);
   }, [tab?.url]);
 
-  const handleAutoFillPassword = async (loginName: LoginName) => {
+  const handleAutoFillPassword = async (
+    loginName: LoginName,
+    action: "AUTO_FILL" | "COPY" = "AUTO_FILL",
+  ) => {
     if (tab?.id === undefined || tab?.url === undefined) return;
 
     setError(undefined);
@@ -52,7 +56,7 @@ export function PasswordsView() {
       // Can't use GET_PASSWORD_FOR_LOGIN_NAME here
       // See https://bugzilla.mozilla.org/show_bug.cgi?id=1292701
       await browser.runtime.sendMessage({
-        cmd: "AUTO_FILL_PASSWORD",
+        cmd: `${action}_PASSWORD`,
         tabId: tab.id,
         url: tab.url,
         loginName,
@@ -113,11 +117,20 @@ export function PasswordsView() {
                   handleAutoFillPassword(loginName);
                 }}
               >
-                <KeyIcon />
+                <KeyIcon title="Password item" />
                 <div>
                   <span>{loginName.username}</span>
                   <span>{loginName.sites[0] ?? ""}</span>
                 </div>
+                <a
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleAutoFillPassword(loginName, "COPY");
+                  }}
+                >
+                  <CopyIcon title="Copy password to clipboard" />
+                </a>
               </li>
             ))}
           </ul>

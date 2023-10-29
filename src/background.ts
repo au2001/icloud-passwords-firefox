@@ -39,7 +39,7 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
           message.loginName,
         );
 
-      case "AUTO_FILL_PASSWORD":
+      case "AUTO_FILL_PASSWORD": {
         const { username, password } = await getAPI().getPasswordForLoginName(
           message.tabId,
           message.url,
@@ -73,6 +73,19 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
         if (errors.length !== 0) throw errors.length === 1 ? errors[0] : errors;
 
         return true;
+      }
+
+      case "COPY_PASSWORD": {
+        const { password } = await getAPI().getPasswordForLoginName(
+          message.tabId,
+          message.url,
+          message.loginName,
+        );
+
+        await navigator.clipboard.writeText(password);
+
+        return true;
+      }
     }
   } catch (e) {
     console.error(e);
