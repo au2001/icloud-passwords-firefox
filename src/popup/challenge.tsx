@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import browser from "webextension-polyfill";
 import { LoadingView } from "./loading";
-import { ErrorCode, ErrorView } from "./error";
+import { ErrorView } from "./error";
 import styles from "./challenge.module.scss";
 
 interface Props {
@@ -11,13 +11,15 @@ interface Props {
 export function ChallengeView({ setReady }: Props) {
   const [pake, setPAKE] = useState<object>();
   const [pin, setPin] = useState("");
-  const [error, setError] = useState<ErrorCode>();
+  const [error, setError] = useState<string>();
 
   const requestChallengePin = async () => {
     try {
-      const pake = await browser.runtime.sendMessage({
+      const { success, pake, error } = await browser.runtime.sendMessage({
         cmd: "REQUEST_CHALLENGE_PIN",
       });
+
+      if (error !== undefined || !success) throw error;
 
       setPAKE(pake);
     } catch (e: any) {
@@ -30,13 +32,13 @@ export function ChallengeView({ setReady }: Props) {
     // Setting the challenge PIN freezes the UI, so we delay it by 1 render frame for the input to have time to update one more time
     setTimeout(async () => {
       try {
-        const result = await browser.runtime.sendMessage({
+        const { success, error } = await browser.runtime.sendMessage({
           cmd: "SET_CHALLENGE_PIN",
           pake,
           pin,
         });
 
-        if (result !== true) throw result;
+        if (error !== undefined || !success) throw error;
 
         setReady();
       } catch (e: any) {
@@ -63,10 +65,12 @@ export function ChallengeView({ setReady }: Props) {
     pin = pin.replace(/\D/g, "");
     if (pin.length > 6) return;
     setPin(pin);
+    setError(undefined);
   };
 
-  if (pake === undefined) return <LoadingView />;
-  if (error !== undefined) return <ErrorView code={error} />;
+  if (pake === undefined) return <LoadingView action="REQUEST_CHALLENGE_PIN" />;
+  if (error !== undefined && error !== "INVALID_PIN")
+    return <ErrorView error={error} />;
 
   return (
     <div className={styles.challenge}>
@@ -83,6 +87,7 @@ export function ChallengeView({ setReady }: Props) {
           onChange={(e) => handleChangePin(e.target.value)}
           autoFocus
           disabled={pin.length === 6}
+          className={error === "INVALID_PIN" ? styles.invalid : undefined}
         />
       </div>
     </div>

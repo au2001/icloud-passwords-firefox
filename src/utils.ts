@@ -111,7 +111,7 @@ export function calculateM(
 }
 
 export function encrypt(data: sjcl.BitArray, encKey?: sjcl.BitArray) {
-  if (!encKey) throw new Error("Called encrypt() without a session key");
+  if (!encKey) throw "LOCKED";
 
   const salt = randomWords(4);
   return sjcl.bitArray.concat(
@@ -121,7 +121,7 @@ export function encrypt(data: sjcl.BitArray, encKey?: sjcl.BitArray) {
 }
 
 export function decrypt(data: sjcl.BitArray, encKey?: sjcl.BitArray) {
-  if (!encKey) throw new Error("Called decrypt() without a session key!");
+  if (!encKey) throw "LOCKED";
 
   const salt = sjcl.bitArray.clamp(data, KEY_LEN);
   data = sjcl.bitArray.bitSlice(data, KEY_LEN, undefined as unknown as number);
@@ -129,6 +129,6 @@ export function decrypt(data: sjcl.BitArray, encKey?: sjcl.BitArray) {
   try {
     return sjcl.mode.gcm.decrypt(new sjcl.cipher.aes(encKey), data, salt);
   } catch (e) {
-    throw new Error(`Exception while decrypting message. ${e}`);
+    throw `DECRYPTION_FAILED:${e}`;
   }
 }

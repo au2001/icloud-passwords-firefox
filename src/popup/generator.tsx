@@ -6,14 +6,14 @@ import {
   useState,
 } from "react";
 import { Link } from "react-router-dom";
-import { ErrorCode, ErrorView } from "./error";
+import { ErrorView } from "./error";
 import styles from "./generator.module.scss";
 
 export function GeneratorView() {
   const input = useRef<HTMLInputElement | null>(null);
   const [password, setPassword] = useState("");
   const [copied, setCopied] = useState<boolean>();
-  const [error, setError] = useState<ErrorCode>();
+  const [error, setError] = useState<string>();
 
   useLayoutEffect(() => {
     if (password !== "") return;
@@ -25,8 +25,7 @@ export function GeneratorView() {
 
     const getRandomNumber = (n: number) => {
       const RAND_MAX = Math.pow(2, 32);
-      if (n <= 0 || n > RAND_MAX)
-        throw new Error(`Out of range random value: ${n}`);
+      if (n <= 0 || n > RAND_MAX) throw `RANDOM_OUT_OF_RANGE:${n}`;
 
       const array = new Uint32Array(1);
       do {
@@ -102,7 +101,7 @@ export function GeneratorView() {
     }
   };
 
-  if (error !== undefined) return <ErrorView code={error} />;
+  if (error !== undefined) return <ErrorView error={error} />;
 
   return (
     <div className={styles.generator}>

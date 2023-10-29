@@ -67,7 +67,7 @@ export class ApplePasswordManager {
             } else if (typeof payload === "string") {
               // Do nothing
             } else {
-              throw new Error(`Failed to parse unknown response: ${response}`);
+              throw `UNKNOWN_RESPONSE_PAYLOAD:${response}`;
             }
           }
 
@@ -78,31 +78,23 @@ export class ApplePasswordManager {
               try {
                 smsg = JSON.parse(smsg);
               } catch (e) {
-                throw new Error(
-                  `Unable to decode SMSG from string: ${e} ${smsg}`,
-                );
+                throw `INVALID_SMSG:${smsg}`;
               }
             }
 
-            if (typeof smsg !== "object" || smsg === null) {
-              throw new Error(`Failed to parse unknown response: ${response}`);
-            }
+            if (typeof smsg !== "object" || smsg === null)
+              throw `UNKNOWN_RESPONSE_SMSG:${response}`;
 
             if (!("SDATA" in smsg) || typeof smsg.SDATA !== "string")
-              throw new Error(
-                "Missing or invalid SDATA field in SMSG message.",
-              );
+              throw "MISSING_SMSG_SDATA";
             if (!("TID" in smsg) || typeof smsg.TID !== "string")
-              throw new Error("Missing or invalid 'TID' field in SMSG object.");
+              throw "MISSING_SMSG_TID";
 
             const capabilities = await this.getCapabilities();
             const tid = sjcl.bn.fromBits(
               utils.stringToBits(smsg.TID, capabilities.shouldUseBase64),
             );
-            if (!tid.equals(this.tid))
-              throw new Error(
-                "Received SMSG message meant for another session.",
-              );
+            if (!tid.equals(this.tid)) throw "INVALID_SMSG_TID";
 
             response = JSON.parse(
               sjcl.codec.utf8String.fromBits(
@@ -215,7 +207,7 @@ export class ApplePasswordManager {
         sjcl.codec.utf8String.fromBits(sjcl.codec.base64.toBits(response.PAKE)),
       );
     } catch (e) {
-      throw new Error(`Unable to parse JSON message: ${e}`);
+      throw `INVALID_PAKE:${response.PAKE}`;
     }
 
     if (
@@ -225,16 +217,13 @@ export class ApplePasswordManager {
         ),
       )
     ) {
-      throw new Error("Missing or invalid 'TID' field in PAKE message.");
+      throw "INVALID_PAKE_TID";
     }
 
-    if (!pake.MSG) throw new Error("Missing 'MSG' field in PAKE message.");
+    if (!pake.MSG) throw "MISSING_PAKE_MSG";
 
-    if (parseInt(pake.MSG, 10) !== MSGTypes.MSG1) {
-      throw new Error(
-        `Received Message ${pake.MSG}, but expected Message ${MSGTypes.MSG1}`,
-      );
-    }
+    if (parseInt(pake.MSG, 10) !== MSGTypes.MSG1)
+      throw `MESSAGE_MISMATCH:${pake.MSG}`;
 
     if (
       typeof pake.PROTO === "number" &&
@@ -244,11 +233,8 @@ export class ApplePasswordManager {
       this.capabilities = capabilities;
     }
 
-    if (typeof pake.s !== "string" || typeof pake.B !== "string") {
-      throw new Error(
-        `Message ${MSGTypes.MSG1} is missing some required keys.`,
-      );
-    }
+    if (typeof pake.s !== "string") throw "MISSING_PAKE_S";
+    if (typeof pake.B !== "string") throw "MISSING_PAKE_B";
 
     // if (pake.VER) const appVer = pake.VER;
 
@@ -256,7 +242,7 @@ export class ApplePasswordManager {
       utils.stringToBits(pake.B, capabilities.shouldUseBase64),
     );
 
-    if (b.mod(GRP.N).equals(0)) throw new Error("B.mulmod error");
+    if (b.mod(GRP.N).equals(0)) throw "PAKE_MULMOD_ERROR";
 
     return {
       s: pake.s as string,
@@ -274,7 +260,7 @@ export class ApplePasswordManager {
       capabilities.shouldUseBase64,
     );
 
-    this.verifier = GRP.g.powermod(x, GRP.N);
+    const verifier = GRP.g.powermod(x, GRP.N);
 
     const sessionKey = utils.createSessionKey(
       pake,
@@ -283,7 +269,7 @@ export class ApplePasswordManager {
       capabilities.shouldUseBase64,
     );
 
-    this.encKey = sjcl.bitArray.bitSlice(sessionKey, 0, KEY_LEN);
+    const encKey = sjcl.bitArray.bitSlice(sessionKey, 0, KEY_LEN);
 
     const msg: Record<string, string> = {};
     let hamk;
@@ -309,9 +295,9 @@ export class ApplePasswordManager {
         msg.v = utils.bitsToString(
           utils.encrypt(
             capabilities.shouldUseBase64
-              ? this.verifier.toBits()
-              : sjcl.codec.utf8String.toBits(this.verifier.toString()),
-            this.encKey,
+              ? verifier.toBits()
+              : sjcl.codec.utf8String.toBits(verifier.toString()),
+            encKey,
           ),
           false,
           capabilities.shouldUseBase64,
@@ -319,9 +305,7 @@ export class ApplePasswordManager {
         break;
 
       default:
-        throw new Error(
-          `Unknown protocol version ${capabilities.secretSessionVersion}`,
-        );
+        throw `UNKNOWN_PROTOCOL_VERSION:${capabilities.secretSessionVersion}`;
     }
 
     const response = await this._postMessage(Command.ChallengePIN, {
@@ -347,7 +331,7 @@ export class ApplePasswordManager {
         sjcl.codec.utf8String.fromBits(sjcl.codec.base64.toBits(response.PAKE)),
       );
     } catch (e) {
-      throw new Error(`Unable to parse JSON message: ${e}`);
+      throw `INVALID_PAKE:${response.PAKE}`;
     }
 
     if (
@@ -357,43 +341,43 @@ export class ApplePasswordManager {
         ),
       )
     ) {
-      throw new Error("Missing or invalid 'TID' field in PAKE message.");
+      throw "INVALID_PAKE_TID";
     }
 
-    if (!pake2.MSG) throw new Error("Missing 'MSG' field in PAKE message.");
+    if (!pake2.MSG) throw "MISSING_PAKE_MSG";
 
-    if (parseInt(pake2.MSG, 10) !== MSGTypes.MSG3) {
-      throw new Error(
-        `Received Message ${pake2.MSG}, but expected Message ${MSGTypes.MSG3}`,
-      );
+    if (parseInt(pake2.MSG, 10) !== MSGTypes.MSG3)
+      throw `MESSAGE_MISMATCH:${pake2.MSG}`;
+
+    if (pake2.ErrCode !== 0) {
+      switch (pake2.ErrCode) {
+        case 1:
+          throw "INVALID_PIN";
+
+        default:
+          throw `UNKNOWN_PAKE_ERROR:${pake2.ErrCode}`;
+      }
     }
-
-    if (pake2.ErrCode !== 0)
-      throw new Error(`Message 3 contained an error: ${pake2.ErrCode}`);
 
     switch (capabilities.secretSessionVersion) {
       case SecretSessionVersion.SRPWithRFCVerification:
         if (!pake2.HAMK) {
-          throw new Error(
-            `Message 3 does not contain necessary data: ${pake2.ErrCode}`,
-          );
+          throw "MISSING_HAMK";
         }
 
         const a = utils.stringToBits(pake2.HAMK, capabilities.shouldUseBase64);
-        if (!sjcl.bitArray.equal(a, hamk!))
-          throw new Error("Failed to verify server data.");
+        if (!sjcl.bitArray.equal(a, hamk!)) throw `INVALID_HAMK:${pake2.HAMK}`;
         break;
 
       case SecretSessionVersion.SRPWithOldVerification:
         break;
 
       default:
-        throw new Error(
-          `Unknown SecretSessionVersion ${capabilities.secretSessionVersion}.`,
-        );
+        throw `UNKNOWN_PROTOCOL_VERSION:${capabilities.secretSessionVersion}`;
     }
 
-    return true;
+    this.verifier = verifier;
+    this.encKey = encKey;
   }
 
   async getLoginNamesForURL(tabId: number, url: string) {
@@ -443,11 +427,35 @@ export class ApplePasswordManager {
           sites,
         }));
 
+      case QueryStatus.GenericError:
+        throw "QUERY_GENERIC_ERROR";
+
+      case QueryStatus.InvalidParam:
+        throw "QUERY_INVALID_PARAM";
+
       case QueryStatus.NoResults:
         return [];
 
+      case QueryStatus.FailedToDelete:
+        throw "QUERY_FAILED_TO_DELETE";
+
+      case QueryStatus.FailedToUpdate:
+        throw "QUERY_FAILED_TO_UPDATE";
+
+      case QueryStatus.InvalidMessageFormat:
+        throw "QUERY_INVALID_MESSAGE_FORMAT";
+
+      case QueryStatus.DuplicateItem:
+        throw "QUERY_DUPLICATE_ITEM";
+
+      case QueryStatus.UnknownAction:
+        throw "QUERY_UNKNOWN_ACTION";
+
+      case QueryStatus.InvalidSession:
+        throw "QUERY_INVALID_SESSION";
+
       default:
-        throw new Error(`Invalid query response status: ${response.STATUS}`);
+        throw `UNKNOWN_QUERY_STATUS:${response.STATUS}`;
     }
   }
 
@@ -504,8 +512,35 @@ export class ApplePasswordManager {
           sites,
         }))[0];
 
+      case QueryStatus.GenericError:
+        throw "QUERY_GENERIC_ERROR";
+
+      case QueryStatus.InvalidParam:
+        throw "QUERY_INVALID_PARAM";
+
+      case QueryStatus.NoResults:
+        throw "QUERY_NO_RESULTS";
+
+      case QueryStatus.FailedToDelete:
+        throw "QUERY_FAILED_TO_DELETE";
+
+      case QueryStatus.FailedToUpdate:
+        throw "QUERY_FAILED_TO_UPDATE";
+
+      case QueryStatus.InvalidMessageFormat:
+        throw "QUERY_INVALID_MESSAGE_FORMAT";
+
+      case QueryStatus.DuplicateItem:
+        throw "QUERY_DUPLICATE_ITEM";
+
+      case QueryStatus.UnknownAction:
+        throw "QUERY_UNKNOWN_ACTION";
+
+      case QueryStatus.InvalidSession:
+        throw "QUERY_INVALID_SESSION";
+
       default:
-        throw new Error(`Query response status error: ${response.STATUS}`);
+        throw `UNKNOWN_QUERY_STATUS:${response.STATUS}`;
     }
   }
 

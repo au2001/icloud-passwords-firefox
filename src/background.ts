@@ -13,31 +13,51 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
 
     switch (message.cmd) {
       case "IS_READY":
-        return api?.ready ?? false;
+        return {
+          success: true,
+          ready: api?.ready ?? false,
+        };
 
       case "LOCK":
         if (!api?.ready) return false;
 
         api.close();
         api = null;
-        return true;
+        return {
+          success: true,
+          locked: true,
+        };
 
       case "REQUEST_CHALLENGE_PIN":
-        return await getAPI().requestChallengePIN();
+        return {
+          success: true,
+          pake: await getAPI().requestChallengePIN(),
+        };
 
       case "SET_CHALLENGE_PIN":
-        getAPI().setChallengePIN(message.pake, message.pin);
-        return true;
+        await getAPI().setChallengePIN(message.pake, message.pin);
+        return {
+          success: true,
+        };
 
       case "GET_LOGIN_NAMES_FOR_URL":
-        return await getAPI().getLoginNamesForURL(message.tabId, message.url);
+        return {
+          success: true,
+          loginNames: await getAPI().getLoginNamesForURL(
+            message.tabId,
+            message.url,
+          ),
+        };
 
       case "GET_PASSWORD_FOR_LOGIN_NAME":
-        return await getAPI().getPasswordForLoginName(
-          message.tabId,
-          message.url,
-          message.loginName,
-        );
+        return {
+          success: true,
+          loginName: await getAPI().getPasswordForLoginName(
+            message.tabId,
+            message.url,
+            message.loginName,
+          ),
+        };
 
       case "AUTO_FILL_PASSWORD": {
         const { username, password } = await getAPI().getPasswordForLoginName(
@@ -47,21 +67,11 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
         );
 
         const tab = await browser.tabs.get(message.tabId);
-        if (tab.id === undefined) {
-          throw new Error(
-            `Failed to find tab ${message.tabId}, stopping auto-fill`,
-          );
-        } else if (!tab.active) {
-          throw new Error(
-            `Tab ${message.tabId} no longer active, stopping auto-fill`,
-          );
-        } else if (tab.url !== message.url) {
-          throw new Error(
-            `Tab ${message.tabId} got redirected from ${message.url} to ${tab.url}, stopping auto-fill`,
-          );
-        }
+        if (tab.id === undefined) throw "AUTO_FILL_TAB_NOT_FOUND";
+        if (!tab.active) throw "AUTO_FILL_TAB_INACTIVE";
+        if (tab.url !== message.url) throw "AUTO_FILL_TAB_REDIRECTED";
 
-        const results = await browser.scripting.executeScript({
+        const [{ result, error }] = await browser.scripting.executeScript({
           target: {
             tabId: tab.id,
           },
@@ -69,10 +79,32 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
           args: [username, password],
         });
 
-        const errors = results.flatMap(({ error }) => error ?? []);
-        if (errors.length !== 0) throw errors.length === 1 ? errors[0] : errors;
+        if (error !== undefined) throw error;
 
-        return true;
+        const { success, warnings } = result;
+        (warnings as string[]).forEach((warning) => {
+          switch (warning) {
+            case "MULTIPLE_PASSWORD_FIELDS":
+              console.warn(
+                `Multiple password input fields found on ${window.location}`,
+              );
+              break;
+
+            case "NO_USERNAME_FIELD":
+              console.warn(
+                `No username input field found on ${window.location}`,
+              );
+              break;
+
+            default:
+              console.warn(warning);
+          }
+        });
+
+        return {
+          success,
+          warnings,
+        };
       }
 
       case "COPY_PASSWORD": {
@@ -84,12 +116,16 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
 
         await navigator.clipboard.writeText(password);
 
-        return true;
+        return {
+          success: true,
+        };
       }
     }
   } catch (e) {
-    console.error(e);
-    throw e;
+    return {
+      success: false,
+      error: e,
+    };
   }
 });
 

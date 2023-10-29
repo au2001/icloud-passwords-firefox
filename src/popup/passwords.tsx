@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import browser from "webextension-polyfill";
 import { useCurrentTab } from "./hooks";
 import { LoadingView } from "./loading";
-import { ErrorCode, ErrorView } from "./error";
+import { ErrorView } from "./error";
 import { KeyIcon } from "./icons/key";
 import { CopyIcon } from "./icons/copy";
 import styles from "./passwords.module.scss";
@@ -16,7 +16,7 @@ interface LoginName {
 export function PasswordsView() {
   const tab = useCurrentTab();
   const [loginNames, setLoginNames] = useState<LoginName[]>();
-  const [error, setError] = useState<ErrorCode>();
+  const [error, setError] = useState<string>();
 
   const fetchLoginNames = async (tabId: number, url: string) => {
     setLoginNames(undefined);
@@ -25,11 +25,13 @@ export function PasswordsView() {
     if (new URL(url).hostname === "") return;
 
     try {
-      const loginNames = await browser.runtime.sendMessage({
+      const { success, loginNames, error } = await browser.runtime.sendMessage({
         cmd: "GET_LOGIN_NAMES_FOR_URL",
         tabId,
         url,
       });
+
+      if (error !== undefined || !success) throw error;
 
       setLoginNames(loginNames);
     } catch (e: any) {
@@ -55,12 +57,16 @@ export function PasswordsView() {
     try {
       // Can't use GET_PASSWORD_FOR_LOGIN_NAME here
       // See https://bugzilla.mozilla.org/show_bug.cgi?id=1292701
-      await browser.runtime.sendMessage({
+      const { success, warnings, error } = await browser.runtime.sendMessage({
         cmd: `${action}_PASSWORD`,
         tabId: tab.id,
         url: tab.url,
         loginName,
       });
+
+      if (error !== undefined || !success) throw error;
+
+      (warnings as string[]).forEach((warning) => console.warn(warning));
     } catch (e: any) {
       setError(e);
     }
@@ -70,9 +76,11 @@ export function PasswordsView() {
     setError(undefined);
 
     try {
-      await browser.runtime.sendMessage({
+      const { success, error } = await browser.runtime.sendMessage({
         cmd: "LOCK",
       });
+
+      if (error !== undefined || !success) throw error;
 
       // We don't want to show the challenge view right away, so we close the extension instead
       // Next time the user opens the extension, they will see the challenge view automatically
@@ -82,11 +90,13 @@ export function PasswordsView() {
     }
   };
 
-  if (error !== undefined) return <ErrorView code={error} />;
-  if (tab?.id === undefined || tab?.url === undefined) return <LoadingView />;
+  if (error !== undefined) return <ErrorView error={error} />;
+  if (tab?.id === undefined || tab?.url === undefined)
+    return <LoadingView action="CURRENT_TAB" />;
   if (new URL(tab.url).hostname === "")
-    return <ErrorView code={ErrorCode.URL_NOT_COMPATIBLE} />;
-  if (loginNames === undefined) return <LoadingView />;
+    return <ErrorView error={`URL_NOT_COMPATIBLE:${tab.url}`} />;
+  if (loginNames === undefined)
+    return <LoadingView action="GET_LOGIN_NAMES_FOR_URL" />;
 
   return (
     <div className={styles.passwords}>

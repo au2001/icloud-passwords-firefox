@@ -55,6 +55,10 @@
       &:disabled {
         color: $color-text-disabled;
       }
+
+      &.invalid {
+        border-color: $color-text-error;
+      }
     }
   }
 }

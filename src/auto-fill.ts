@@ -1,4 +1,6 @@
 export function autoFillPassword(username: string, password: string) {
+  const warnings: string[] = [];
+
   let passwordInputs = Array.from(
     document.querySelectorAll<HTMLInputElement>(
       "input[autocomplete=current-password]",
@@ -12,9 +14,9 @@ export function autoFillPassword(username: string, password: string) {
   }
 
   if (passwordInputs.length === 0) {
-    throw new Error(`No password input field found on ${window.location}`);
+    throw "AUTO_FILL_NO_PASSWORD_FIELD";
   } else if (passwordInputs.length > 1) {
-    console.warn(`Multiple password input fields found on ${window.location}`);
+    warnings.push("AUTO_FILL_MULTIPLE_PASSWORD_FIELDS");
   }
 
   const passwordInput = passwordInputs[0];
@@ -58,7 +60,7 @@ export function autoFillPassword(username: string, password: string) {
 
     while (usernameInput.previousElementSibling === null) {
       if (usernameInput.parentElement === null) {
-        console.warn(`No username input field found on ${window.location}`);
+        warnings.push("AUTO_FILL_NO_USERNAME_FIELD");
         usernameInput = null;
         break outer;
       }
@@ -91,13 +93,7 @@ export function autoFillPassword(username: string, password: string) {
       "value",
     )?.set;
 
-    if (nativeInputValueSetter === undefined) {
-      throw new Error(
-        `Failed to set value for input ${input} on ${window.location}`,
-      );
-    }
-
-    nativeInputValueSetter.call(input, value);
+    nativeInputValueSetter?.call(input, value);
 
     input.dispatchEvent(new Event("change", { bubbles: true }));
 
@@ -107,4 +103,9 @@ export function autoFillPassword(username: string, password: string) {
 
   if (usernameInput !== null) setNativeValue(usernameInput, username);
   setNativeValue(passwordInput, password);
+
+  return {
+    success: true,
+    warnings,
+  };
 }

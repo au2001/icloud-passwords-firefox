@@ -1,6 +1,6 @@
 {
   "name": "iCloud Passwords",
-  "version": "2.1.21",
+  "version": "1.0.0",
   "description": "iCloud Passwords lets you fill passwords from iCloud Keychain when signing in to websites using Firefox.",
   "manifest_version": 3,
   "action": {
