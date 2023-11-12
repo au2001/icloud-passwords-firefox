@@ -80,6 +80,7 @@ export class ApplePasswordManager extends EventEmitter {
         this.emit("error", error);
 
         this.port = undefined;
+        this.emit("ready", false);
       });
     }
 
@@ -200,6 +201,7 @@ export class ApplePasswordManager extends EventEmitter {
 
   get ready() {
     return (
+      this.port !== undefined &&
       this.capabilities !== undefined &&
       this.verifier !== undefined &&
       this.encKey !== undefined

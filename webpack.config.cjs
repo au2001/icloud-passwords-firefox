@@ -7,6 +7,7 @@ module.exports = {
     settings: "./src/settings/index.tsx",
     background: "./src/background/index.ts",
     popup: "./src/popup/index.tsx",
+    "auto-fill": "./src/scripts/auto-fill.ts",
   },
   resolve: {
     extensions: [".tsx", ".ts", ".jsx", ".js"],
