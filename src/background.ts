@@ -1,6 +1,6 @@
 import browser from "webextension-polyfill";
-import { ApplePasswordManager } from "./api";
-import { autoFillPassword } from "./auto-fill";
+import { ApplePasswordManager } from "./utils/api";
+import { fillPassword } from "./scripts/fill";
 
 let api: ApplePasswordManager | null = null;
 const getAPI = () => (api ??= new ApplePasswordManager());
@@ -74,7 +74,7 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
           target: {
             tabId: tab.id,
           },
-          func: autoFillPassword,
+          func: fillPassword,
           args: [username, password],
         });
 

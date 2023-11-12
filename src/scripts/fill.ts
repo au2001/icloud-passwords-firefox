@@ -1,4 +1,4 @@
-export function autoFillPassword(username: string, password: string) {
+export function fillPassword(username: string, password: string) {
   const warnings: string[] = [];
 
   let passwordInputs = Array.from(

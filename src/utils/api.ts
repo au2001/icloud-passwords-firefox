@@ -1,5 +1,4 @@
 import sjcl from "sjcl";
-import * as utils from "./utils";
 import browser, { Runtime } from "webextension-polyfill";
 import {
   Action,
@@ -11,6 +10,17 @@ import {
   QueryStatus,
   SecretSessionVersion,
 } from "./constants";
+import {
+  bitsToString,
+  calculateM,
+  calculateX,
+  createSessionKey,
+  decrypt,
+  encrypt,
+  randomWords,
+  stringToBase64,
+  stringToBits,
+} from "./crypto";
 
 export class ApplePasswordManager {
   private readonly events = new EventTarget();
@@ -35,8 +45,8 @@ export class ApplePasswordManager {
 
   constructor() {
     // Setup SecureRemotePassword (SRP)
-    this.tid = sjcl.bn.fromBits(utils.randomWords(4));
-    this.a = sjcl.bn.fromBits(utils.randomWords(8));
+    this.tid = sjcl.bn.fromBits(randomWords(4));
+    this.a = sjcl.bn.fromBits(randomWords(8));
   }
 
   private _connect() {
@@ -119,14 +129,14 @@ export class ApplePasswordManager {
 
             const capabilities = await this.getCapabilities();
             const tid = sjcl.bn.fromBits(
-              utils.stringToBits(smsg.TID, capabilities.shouldUseBase64),
+              stringToBits(smsg.TID, capabilities.shouldUseBase64),
             );
             if (!tid.equals(this.tid)) throw "INVALID_SMSG_TID";
 
             response = JSON.parse(
               sjcl.codec.utf8String.fromBits(
-                utils.decrypt(
-                  utils.stringToBits(smsg.SDATA, capabilities.shouldUseBase64),
+                decrypt(
+                  stringToBits(smsg.SDATA, capabilities.shouldUseBase64),
                   this.encKey,
                 ),
               ),
@@ -234,15 +244,15 @@ export class ApplePasswordManager {
     const response = await this._postMessage(Command.ChallengePIN, {
       msg: {
         QID: "m0",
-        PAKE: utils.stringToBase64(
+        PAKE: stringToBase64(
           JSON.stringify({
-            TID: utils.bitsToString(
+            TID: bitsToString(
               this.tid.toBits(),
               true,
               capabilities.shouldUseBase64,
             ),
             MSG: 0,
-            A: utils.bitsToString(
+            A: bitsToString(
               GRP.g.powermod(this.a, GRP.N).toBits(),
               true,
               capabilities.shouldUseBase64,
@@ -269,9 +279,7 @@ export class ApplePasswordManager {
 
     if (
       !this.tid.equals(
-        sjcl.bn.fromBits(
-          utils.stringToBits(pake.TID, capabilities.shouldUseBase64),
-        ),
+        sjcl.bn.fromBits(stringToBits(pake.TID, capabilities.shouldUseBase64)),
       )
     ) {
       throw "INVALID_PAKE_TID";
@@ -296,7 +304,7 @@ export class ApplePasswordManager {
     // if (pake.VER) const appVer = pake.VER;
 
     const b = sjcl.bn.fromBits(
-      utils.stringToBits(pake.B, capabilities.shouldUseBase64),
+      stringToBits(pake.B, capabilities.shouldUseBase64),
     );
 
     if (b.mod(GRP.N).equals(0)) throw "PAKE_MULMOD_ERROR";
@@ -310,16 +318,11 @@ export class ApplePasswordManager {
   async setChallengePIN(pake: { s: string; B: string }, pin: string) {
     const capabilities = await this.getCapabilities();
 
-    const x = utils.calculateX(
-      pake,
-      this.tid,
-      pin,
-      capabilities.shouldUseBase64,
-    );
+    const x = calculateX(pake, this.tid, pin, capabilities.shouldUseBase64);
 
     const verifier = GRP.g.powermod(x, GRP.N);
 
-    const sessionKey = utils.createSessionKey(
+    const sessionKey = createSessionKey(
       pake,
       this.a,
       x,
@@ -333,24 +336,20 @@ export class ApplePasswordManager {
     switch (capabilities.secretSessionVersion) {
       case SecretSessionVersion.SRPWithRFCVerification:
         let m;
-        [m, hamk] = utils.calculateM(
+        [m, hamk] = calculateM(
           pake,
           sessionKey,
-          utils.bitsToString(
-            this.tid.toBits(),
-            true,
-            capabilities.shouldUseBase64,
-          ),
+          bitsToString(this.tid.toBits(), true, capabilities.shouldUseBase64),
           this.a,
           capabilities.shouldUseBase64,
         );
 
-        msg.M = utils.bitsToString(m, false, capabilities.shouldUseBase64);
+        msg.M = bitsToString(m, false, capabilities.shouldUseBase64);
         break;
 
       case SecretSessionVersion.SRPWithOldVerification:
-        msg.v = utils.bitsToString(
-          utils.encrypt(
+        msg.v = bitsToString(
+          encrypt(
             capabilities.shouldUseBase64
               ? verifier.toBits()
               : sjcl.codec.utf8String.toBits(verifier.toString()),
@@ -368,9 +367,9 @@ export class ApplePasswordManager {
     const response = await this._postMessage(Command.ChallengePIN, {
       msg: {
         QID: "m2",
-        PAKE: utils.stringToBase64(
+        PAKE: stringToBase64(
           JSON.stringify({
-            TID: utils.bitsToString(
+            TID: bitsToString(
               this.tid.toBits(),
               true,
               capabilities.shouldUseBase64,
@@ -393,9 +392,7 @@ export class ApplePasswordManager {
 
     if (
       !this.tid.equals(
-        sjcl.bn.fromBits(
-          utils.stringToBits(pake2.TID, capabilities.shouldUseBase64),
-        ),
+        sjcl.bn.fromBits(stringToBits(pake2.TID, capabilities.shouldUseBase64)),
       )
     ) {
       throw "INVALID_PAKE_TID";
@@ -422,7 +419,7 @@ export class ApplePasswordManager {
           throw "MISSING_HAMK";
         }
 
-        const a = utils.stringToBits(pake2.HAMK, capabilities.shouldUseBase64);
+        const a = stringToBits(pake2.HAMK, capabilities.shouldUseBase64);
         if (!sjcl.bitArray.equal(a, hamk!)) throw `INVALID_HAMK:${pake2.HAMK}`;
         break;
 
@@ -442,7 +439,7 @@ export class ApplePasswordManager {
 
     const { hostname } = new URL(url);
 
-    const sdata = utils.encrypt(
+    const sdata = encrypt(
       sjcl.codec.utf8String.toBits(
         JSON.stringify({
           ACT: Action.GhostSearch,
@@ -459,12 +456,12 @@ export class ApplePasswordManager {
       payload: {
         QID: "CmdGetLoginNames4URL",
         SMSG: {
-          TID: utils.bitsToString(
+          TID: bitsToString(
             this.tid.toBits(),
             true,
             capabilities.shouldUseBase64,
           ),
-          SDATA: utils.bitsToString(sdata, true, capabilities.shouldUseBase64),
+          SDATA: bitsToString(sdata, true, capabilities.shouldUseBase64),
         },
       },
     });
@@ -517,7 +514,7 @@ export class ApplePasswordManager {
 
     const { hostname } = new URL(url);
 
-    const sdata = utils.encrypt(
+    const sdata = encrypt(
       sjcl.codec.utf8String.toBits(
         JSON.stringify({
           ACT: Action.Search,
@@ -535,12 +532,12 @@ export class ApplePasswordManager {
       payload: {
         QID: "CmdGetPassword4LoginName",
         SMSG: {
-          TID: utils.bitsToString(
+          TID: bitsToString(
             this.tid.toBits(),
             true,
             capabilities.shouldUseBase64,
           ),
-          SDATA: utils.bitsToString(sdata, true, capabilities.shouldUseBase64),
+          SDATA: bitsToString(sdata, true, capabilities.shouldUseBase64),
         },
       },
     });

@@ -46,9 +46,9 @@ export function PasswordsView() {
     fetchLoginNames(tab.id, tab.url);
   }, [tab?.url]);
 
-  const handleAutoFillPassword = async (
+  const handleFillPassword = async (
     loginName: LoginName,
-    action: "AUTO_FILL" | "COPY" = "AUTO_FILL",
+    action: "FILL" | "COPY" = "FILL",
   ) => {
     if (tab?.id === undefined || tab?.url === undefined) return;
 
@@ -124,7 +124,7 @@ export function PasswordsView() {
                 key={i}
                 onClick={(e) => {
                   e.preventDefault();
-                  handleAutoFillPassword(loginName);
+                  handleFillPassword(loginName);
                 }}
               >
                 <KeyIcon title="Password item" />
@@ -136,7 +136,7 @@ export function PasswordsView() {
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    handleAutoFillPassword(loginName, "COPY");
+                    handleFillPassword(loginName, "COPY");
                   }}
                 >
                   <CopyIcon title="Copy password to clipboard" />
