@@ -61,3 +61,16 @@ export enum QueryStatus {
   UnknownAction = 8,
   InvalidSession = 9,
 }
+
+export const QUERY_STATUS_ERRORS: Record<QueryStatus, string> = {
+  [QueryStatus.Success]: "QUERY_SUCCESS",
+  [QueryStatus.GenericError]: "QUERY_GENERIC_ERROR",
+  [QueryStatus.InvalidParam]: "QUERY_INVALID_PARAM",
+  [QueryStatus.NoResults]: "QUERY_NO_RESULTS",
+  [QueryStatus.FailedToDelete]: "QUERY_FAILED_TO_DELETE",
+  [QueryStatus.FailedToUpdate]: "QUERY_FAILED_TO_UPDATE",
+  [QueryStatus.InvalidMessageFormat]: "QUERY_INVALID_MESSAGE_FORMAT",
+  [QueryStatus.DuplicateItem]: "QUERY_DUPLICATE_ITEM",
+  [QueryStatus.UnknownAction]: "QUERY_UNKNOWN_ACTION",
+  [QueryStatus.InvalidSession]: "QUERY_INVALID_SESSION",
+};

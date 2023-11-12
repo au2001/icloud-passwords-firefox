@@ -11,38 +11,6 @@ export function ErrorView({ error }: Props) {
     const [code, param] = error?.toString().split(":", 2) ?? [];
 
     switch (code) {
-      case "AUTO_FILL_NO_PASSWORD_FIELD":
-        return (
-          <>
-            No password field was found on the current page. Make sure you have
-            the login form open.
-          </>
-        );
-
-      case "AUTO_FILL_TAB_INACTIVE":
-        return (
-          <>
-            The tab you were auto-filling on is no longer active. Auto-fill was
-            cancelled.
-          </>
-        );
-
-      case "AUTO_FILL_TAB_NOT_FOUND":
-        return (
-          <>
-            The tab you were auto-filling on no longer exists. Auto-fill was
-            cancelled.
-          </>
-        );
-
-      case "AUTO_FILL_TAB_REDIRECTED":
-        return (
-          <>
-            The tab you were auto-filling on changed URL. Auto-fill was
-            cancelled.
-          </>
-        );
-
       case "LOADING_TIMED_OUT":
         return (
           <>
@@ -117,6 +85,14 @@ export function ErrorView({ error }: Props) {
           </>
         );
 
+      case "NO_PASSWORD_FIELD":
+        return (
+          <>
+            No password field was found on the current page. Make sure you have
+            the login form open.
+          </>
+        );
+
       case "QUERY_DUPLICATE_ITEM":
         return <>An account already exists under that name.</>;
 
@@ -128,6 +104,30 @@ export function ErrorView({ error }: Props) {
 
       case "QUERY_NO_RESULTS":
         return <>This account could not be found.</>;
+
+      case "TAB_INACTIVE":
+        return (
+          <>
+            The tab you were auto-filling on is no longer active. Auto-fill was
+            cancelled.
+          </>
+        );
+
+      case "TAB_NOT_FOUND":
+        return (
+          <>
+            The tab you were auto-filling on no longer exists. Auto-fill was
+            cancelled.
+          </>
+        );
+
+      case "TAB_REDIRECTED":
+        return (
+          <>
+            The tab you were auto-filling on changed URL. Auto-fill was
+            cancelled.
+          </>
+        );
 
       case "UNKNOWN_PROTOCOL_VERSION":
         return <>iCloud Passwords cannot save passwords on this website.</>;

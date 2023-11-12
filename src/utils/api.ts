@@ -1,5 +1,6 @@
 import sjcl from "sjcl";
 import browser, { Runtime } from "webextension-polyfill";
+import { EventEmitter } from "events";
 import {
   Action,
   BROWSER_NAME,
@@ -7,6 +8,7 @@ import {
   GRP,
   KEY_LEN,
   MSGTypes,
+  QUERY_STATUS_ERRORS,
   QueryStatus,
   SecretSessionVersion,
 } from "./constants";
@@ -22,8 +24,7 @@ import {
   stringToBits,
 } from "./crypto";
 
-export class ApplePasswordManager {
-  private readonly events = new EventTarget();
+export class ApplePasswordManager extends EventEmitter {
   private readonly tid: sjcl.BigNumber;
   private readonly a: sjcl.BigNumber;
 
@@ -44,6 +45,8 @@ export class ApplePasswordManager {
   private encKey?: sjcl.BitArray;
 
   constructor() {
+    super();
+
     // Setup SecureRemotePassword (SRP)
     this.tid = sjcl.bn.fromBits(randomWords(4));
     this.a = sjcl.bn.fromBits(randomWords(8));
@@ -74,12 +77,7 @@ export class ApplePasswordManager {
             break;
         }
 
-        this.events.dispatchEvent(
-          new CustomEvent("error", {
-            cancelable: false,
-            detail: error,
-          }),
-        );
+        this.emit("error", error);
 
         this.port = undefined;
       });
@@ -147,18 +145,18 @@ export class ApplePasswordManager {
         } catch (e) {
           return reject(e);
         } finally {
-          this.events.removeEventListener("error", callback);
+          this.removeListener("error", callback);
           port.onMessage.removeListener(callback);
         }
       };
 
-      const onError = (event: Event) => {
-        this.events.removeEventListener("error", callback);
+      const onError = (error: string | null) => {
+        this.removeListener("error", callback);
         port.onMessage.removeListener(callback);
-        return reject((event as CustomEvent).detail ?? event);
+        return reject(error);
       };
 
-      this.events.addEventListener("error", onError);
+      this.addListener("error", onError);
       port = this._connect();
       port.onMessage.addListener(callback);
     });
@@ -177,18 +175,18 @@ export class ApplePasswordManager {
       response = new Promise<void>((resolve, reject) => {
         let timeout: NodeJS.Timeout;
 
-        const onError = (event: Event) => {
-          this.events.removeEventListener("error", onError);
+        const onError = (error: string | null) => {
+          this.removeListener("error", onError);
           clearTimeout(timeout);
-          return reject((event as CustomEvent).detail ?? event);
+          return reject(error);
         };
 
         timeout = setTimeout(() => {
-          this.events.removeEventListener("error", onError);
+          this.removeListener("error", onError);
           resolve();
         }, 200);
 
-        this.events.addEventListener("error", onError);
+        this.addListener("error", onError);
       });
     }
 
@@ -432,6 +430,7 @@ export class ApplePasswordManager {
 
     this.verifier = verifier;
     this.encKey = encKey;
+    this.emit("ready", true);
   }
 
   async getLoginNamesForURL(tabId: number, url: string) {
@@ -473,35 +472,14 @@ export class ApplePasswordManager {
           sites,
         }));
 
-      case QueryStatus.GenericError:
-        throw "QUERY_GENERIC_ERROR";
-
-      case QueryStatus.InvalidParam:
-        throw "QUERY_INVALID_PARAM";
-
       case QueryStatus.NoResults:
         return [];
 
-      case QueryStatus.FailedToDelete:
-        throw "QUERY_FAILED_TO_DELETE";
-
-      case QueryStatus.FailedToUpdate:
-        throw "QUERY_FAILED_TO_UPDATE";
-
-      case QueryStatus.InvalidMessageFormat:
-        throw "QUERY_INVALID_MESSAGE_FORMAT";
-
-      case QueryStatus.DuplicateItem:
-        throw "QUERY_DUPLICATE_ITEM";
-
-      case QueryStatus.UnknownAction:
-        throw "QUERY_UNKNOWN_ACTION";
-
-      case QueryStatus.InvalidSession:
-        throw "QUERY_INVALID_SESSION";
-
       default:
-        throw `UNKNOWN_QUERY_STATUS:${response.STATUS}`;
+        throw (
+          QUERY_STATUS_ERRORS[response.STATUS as QueryStatus] ??
+          `UNKNOWN_QUERY_STATUS:${response.STATUS}`
+        );
     }
   }
 
@@ -550,35 +528,11 @@ export class ApplePasswordManager {
           sites,
         }))[0];
 
-      case QueryStatus.GenericError:
-        throw "QUERY_GENERIC_ERROR";
-
-      case QueryStatus.InvalidParam:
-        throw "QUERY_INVALID_PARAM";
-
-      case QueryStatus.NoResults:
-        throw "QUERY_NO_RESULTS";
-
-      case QueryStatus.FailedToDelete:
-        throw "QUERY_FAILED_TO_DELETE";
-
-      case QueryStatus.FailedToUpdate:
-        throw "QUERY_FAILED_TO_UPDATE";
-
-      case QueryStatus.InvalidMessageFormat:
-        throw "QUERY_INVALID_MESSAGE_FORMAT";
-
-      case QueryStatus.DuplicateItem:
-        throw "QUERY_DUPLICATE_ITEM";
-
-      case QueryStatus.UnknownAction:
-        throw "QUERY_UNKNOWN_ACTION";
-
-      case QueryStatus.InvalidSession:
-        throw "QUERY_INVALID_SESSION";
-
       default:
-        throw `UNKNOWN_QUERY_STATUS:${response.STATUS}`;
+        throw (
+          QUERY_STATUS_ERRORS[response.STATUS as QueryStatus] ??
+          `UNKNOWN_QUERY_STATUS:${response.STATUS}`
+        );
     }
   }
 

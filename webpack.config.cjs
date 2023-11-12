@@ -5,7 +5,7 @@ module.exports = {
   mode: "development",
   entry: {
     settings: "./src/settings/index.tsx",
-    background: "./src/background.ts",
+    background: "./src/background/index.ts",
     popup: "./src/popup/index.tsx",
   },
   resolve: {

@@ -14,9 +14,9 @@ export function fillPassword(username: string, password: string) {
   }
 
   if (passwordInputs.length === 0) {
-    throw "AUTO_FILL_NO_PASSWORD_FIELD";
+    throw "NO_PASSWORD_FIELD";
   } else if (passwordInputs.length > 1) {
-    warnings.push("AUTO_FILL_MULTIPLE_PASSWORD_FIELDS");
+    warnings.push("MULTIPLE_PASSWORD_FIELDS");
   }
 
   const passwordInput = passwordInputs[0];
@@ -36,19 +36,20 @@ export function fillPassword(username: string, password: string) {
     ];
 
     const fields = [
-      input.autocomplete,
-      input.name,
-      input.id,
-      input.className,
-      input.placeholder,
-      input.ariaLabel,
-      input.getAttribute("ng-model"),
+      "autocomplete",
+      "name",
+      "id",
+      "className",
+      "placeholder",
+      "aria-label",
+      "ng-model",
     ];
 
-    return fields.some(
-      (field) =>
-        field && types.some((type) => field.toLowerCase().includes(type)),
-    );
+    return fields.some((field) => {
+      const value = input.getAttribute(field)?.toLowerCase();
+      if (!value) return false;
+      return types.some((type) => value.includes(type));
+    });
   };
 
   let usernameInput: Element | null = passwordInput;
@@ -60,7 +61,7 @@ export function fillPassword(username: string, password: string) {
 
     while (usernameInput.previousElementSibling === null) {
       if (usernameInput.parentElement === null) {
-        warnings.push("AUTO_FILL_NO_USERNAME_FIELD");
+        warnings.push("NO_USERNAME_FIELD");
         usernameInput = null;
         break outer;
       }
