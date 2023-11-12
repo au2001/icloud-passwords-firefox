@@ -4,6 +4,7 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 module.exports = {
   mode: "development",
   entry: {
+    settings: "./src/settings/index.tsx",
     background: "./src/background.ts",
     popup: "./src/popup/index.tsx",
   },
@@ -39,6 +40,12 @@ module.exports = {
           from: "./LICENSE",
         },
       ],
+    }),
+    new HtmlWebpackPlugin({
+      template: "./src/settings/index.html",
+      filename: "./settings.html",
+      inject: "body",
+      chunks: ["settings"],
     }),
     new HtmlWebpackPlugin({
       template: "./src/popup/index.html",

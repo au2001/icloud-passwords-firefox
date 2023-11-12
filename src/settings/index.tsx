@@ -1,7 +1,7 @@
 import ReactDOM from "react-dom/client";
-import { PopupView } from "./popup";
+import { SettingsView } from "./settings";
 
 import "./index.scss";
 
 const root = ReactDOM.createRoot(document.getElementById("root")!);
-root.render(<PopupView />);
+root.render(<SettingsView />);

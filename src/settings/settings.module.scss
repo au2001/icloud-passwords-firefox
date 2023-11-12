@@ -1,0 +1,10 @@
+.settings {
+  overflow: auto;
+
+  > fieldset {
+    padding: 0;
+    border: none;
+
+    margin: 10px 0;
+  }
+}

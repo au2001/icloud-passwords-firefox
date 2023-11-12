@@ -27,13 +27,12 @@ $font-in-content-body-small: "SF Pro Text Regular 13px/150%";
 $font-in-content-body-small-link: "SF Pro Text Regular 13px/150%, underline";
 
 html {
-  background-color: $color-background-1;
+  background-color: #23222b;
 }
 
 body {
   margin: 0;
-  width: 400px;
-  max-height: 600px;
+  min-height: 250px;
 
   // TODO: $font-in-content-body-default
   font-size: 15px;

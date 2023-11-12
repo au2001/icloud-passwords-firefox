@@ -17,13 +17,18 @@
     "128": "./images/PasswordsExtensionIcon_128.png"
   },
   "permissions": [
+    "storage",
     "nativeMessaging",
     "activeTab",
     "scripting",
     "clipboardWrite"
   ],
   "optional_permissions": ["tabs"],
-  "host_permissions": ["*://*/*"],
+  "host_permissions": ["<all_urls>"],
+  "options_ui": {
+    "page": "./settings.html",
+    "open_in_tab": false
+  },
   "background": {
     "scripts": ["./background.js"]
   },
