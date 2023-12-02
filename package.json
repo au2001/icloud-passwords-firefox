@@ -2,6 +2,7 @@
   "name": "icloud-passwords-firefox",
   "version": "1.0.0",
   "type": "module",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/aurelien-garnier/icloud-passwords-firefox.git"
