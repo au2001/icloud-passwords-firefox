@@ -35,6 +35,9 @@ module.exports = {
         {
           from: "./meta",
         },
+        {
+          from: "./LICENSE",
+        },
       ],
     }),
     new HtmlWebpackPlugin({
