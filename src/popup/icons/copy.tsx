@@ -22,8 +22,8 @@ export function CopyIcon({
       role="img"
       {...props}
     >
-      <title id={uuid}>{title}</title>
-      <desc id={uuid}>{desc}</desc>
+      <title id={`${uuid}_title`}>{title}</title>
+      <desc id={`${uuid}_desc`}>{desc}</desc>
       <path
         d="M2.41667 6.33333V13C2.41667 13.598 2.90201 14.0833 3.50001 14.0833H8.83334C9.43134 14.0833 9.91667 13.598 9.91667 13V6.33333C9.91667 5.73533 9.43134 5.25 8.83334 5.25H3.50001C2.90201 5.25 2.41667 5.73533 2.41667 6.33333Z"
         strokeWidth="1.5"

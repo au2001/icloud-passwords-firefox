@@ -8,7 +8,7 @@ interface Props {
 
 export function ErrorView({ error }: Props) {
   const message = useMemo(() => {
-    const [code, param] = error.toString().split(":", 2);
+    const [code, param] = error?.toString().split(":", 2) ?? [];
 
     switch (code) {
       case "AUTO_FILL_NO_PASSWORD_FIELD":
@@ -52,7 +52,10 @@ export function ErrorView({ error }: Props) {
         );
 
       case "MISSING_CONNECT_NATIVE_HOST":
-        if (navigator.platform === "MacIntel") {
+        if (
+          navigator.platform === "MacIntel" ||
+          navigator.userAgent.includes("Intel Mac OS X")
+        ) {
           return (
             <>
               iCloud Passwords requires macOS Sonoma or later to be installed.
@@ -62,7 +65,7 @@ export function ErrorView({ error }: Props) {
         } else {
           let downloadUrl: string | undefined;
 
-          let windowsVersion = /\(Windows\s*\w*\s*(\d*)\.(\d*)/i.exec(
+          let windowsVersion = /\(Windows\s*\w*\s*(\d+)[\._](\d+)/i.exec(
             navigator.userAgent,
           );
           if (windowsVersion !== null && windowsVersion.length !== 3) {
@@ -104,7 +107,7 @@ export function ErrorView({ error }: Props) {
           <>
             The setup process could not complete successfully. Follow{" "}
             <a
-              href="https://github.com/au2001/icloud-passwords-firefox#README"
+              href="https://github.com/aurelien-garnier/icloud-passwords-firefox#README"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -161,7 +164,7 @@ export function ErrorView({ error }: Props) {
       case "UNKNOWN_RESPONSE_PAYLOAD":
       case "UNKNOWN_RESPONSE_SMSG":
       default:
-        console.error(error);
+        if (error) console.error(error);
         return (
           <>
             An unknown error occurred. Make sure you have the latest version of

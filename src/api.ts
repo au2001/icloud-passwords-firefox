@@ -44,27 +44,33 @@ export class ApplePasswordManager {
       this.port = browser.runtime.connectNative("com.apple.passwordmanager");
 
       this.port.onDisconnect.addListener((port) => {
-        if (browser.runtime.lastError) {
-          let error = browser.runtime.lastError.message;
-          switch (error) {
-            case "Specified native messaging host not found.":
-              error = "MISSING_CONNECT_NATIVE_HOST";
-              break;
+        if (this.port !== port) return;
 
-            case "Access to the specified native messaging host is forbidden.":
-              error = "MISSING_CONNECT_NATIVE_PERMISSION";
-              break;
-          }
+        const message = port.error?.message ?? browser.runtime.lastError?.message;
 
-          this.events.dispatchEvent(
-            new CustomEvent("error", {
-              cancelable: false,
-              detail: error,
-            }),
-          );
+        let error;
+        switch (message) {
+          case "No such native application com.apple.passwordmanager":
+          case "Specified native messaging host not found.":
+            error = "MISSING_CONNECT_NATIVE_HOST";
+            break;
+
+          case "Access to the specified native messaging host is forbidden.":
+            error = "MISSING_CONNECT_NATIVE_PERMISSION";
+            break;
+
+          default:
+            error = message;
+            break;
         }
 
-        if (this.port !== port) return;
+        this.events.dispatchEvent(
+          new CustomEvent("error", {
+            cancelable: false,
+            detail: error,
+          }),
+        );
+
         this.port = undefined;
       });
     }
