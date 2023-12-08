@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import browser from "webextension-polyfill";
 
-export function useCurrentTab() {
+export const useCurrentTab = () => {
   const [window, setWindow] = useState<browser.Windows.Window>();
   const [tab, setTab] = useState<browser.Tabs.Tab>();
 
@@ -49,4 +49,4 @@ export function useCurrentTab() {
   }, [tab]);
 
   return tab;
-}
+};

@@ -1,46 +1,46 @@
 import sjcl from "sjcl";
 import { GRP, KEY_LEN } from "./constants";
 
-export function randomWords(length: number) {
+export const randomWords = (length: number) => {
   const array = new Int32Array(length);
   crypto.getRandomValues(array);
   return Array.from(array);
-}
+};
 
-export function stringToBase64(str: string) {
+export const stringToBase64 = (str: string) => {
   const bits = sjcl.codec.utf8String.toBits(str);
   return sjcl.codec.base64.fromBits(bits);
-}
+};
 
-export function bitsToString(
+export const bitsToString = (
   bits: any[],
   hexPrefix: boolean,
   shouldUseBase64: boolean,
-) {
+) => {
   return shouldUseBase64
     ? sjcl.codec.base64.fromBits(bits)
     : (hexPrefix ? "0x" : "") + sjcl.codec.hex.fromBits(bits);
-}
+};
 
-export function stringToBits(str: string, shouldUseBase64: boolean) {
+export const stringToBits = (str: string, shouldUseBase64: boolean) => {
   return shouldUseBase64
     ? sjcl.codec.base64.toBits(str)
     : sjcl.codec.hex.toBits(str);
-}
+};
 
-export function padToModulusLength(str: string) {
+export const padToModulusLength = (str: string) => {
   str = str.replace(/^0x/, "");
   const t =
     2 * ((sjcl.bitArray.bitLength(GRP.N.toBits()) + 7) >> 3) - str.length;
   return "0".repeat(t) + str;
-}
+};
 
-export function calculateX(
+export const calculateX = (
   pake: { s: string },
   tid: sjcl.BigNumber,
   pin: string,
   shouldUseBase64: boolean,
-) {
+) => {
   // Same as sjcl.keyexchange.srp.makeX but with sha256 instead of sha1
   return sjcl.bn.fromBits(
     sjcl.hash.sha256.hash(
@@ -51,14 +51,14 @@ export function calculateX(
       ),
     ),
   );
-}
+};
 
-export function createSessionKey(
+export const createSessionKey = (
   pake: { B: string },
   a: sjcl.BigNumber,
   x: sjcl.BigNumber,
   shouldUseBase64: boolean,
-) {
+) => {
   const verifier = GRP.g.powermod(x, GRP.N);
 
   // TODO: Deobfuscate variable names
@@ -75,15 +75,15 @@ export function createSessionKey(
     .mulmod(verifier, GRP.N);
 
   return sjcl.hash.sha256.hash(b.sub(d).powermod(c, GRP.N).toBits());
-}
+};
 
-export function calculateM(
+export const calculateM = (
   pake: { s: string; B: string },
   sessionKey: sjcl.BitArray,
   tid: string,
   a: sjcl.BigNumber,
   shouldUseBase64: boolean,
-) {
+) => {
   // TODO: Deobfuscate variable names
   const n = sjcl.hash.sha256.hash(GRP.N.toBits());
   const r = sjcl.hash.sha256.hash(
@@ -108,9 +108,9 @@ export function calculateM(
   c2.update(sessionKey);
 
   return [l, c2.finalize()];
-}
+};
 
-export function encrypt(data: sjcl.BitArray, encKey?: sjcl.BitArray) {
+export const encrypt = (data: sjcl.BitArray, encKey?: sjcl.BitArray) => {
   if (!encKey) throw "LOCKED";
 
   const salt = randomWords(4);
@@ -118,9 +118,9 @@ export function encrypt(data: sjcl.BitArray, encKey?: sjcl.BitArray) {
     sjcl.mode.gcm.encrypt(new sjcl.cipher.aes(encKey), data, salt),
     salt,
   );
-}
+};
 
-export function decrypt(data: sjcl.BitArray, encKey?: sjcl.BitArray) {
+export const decrypt = (data: sjcl.BitArray, encKey?: sjcl.BitArray) => {
   if (!encKey) throw "LOCKED";
 
   const salt = sjcl.bitArray.clamp(data, KEY_LEN);
@@ -131,4 +131,4 @@ export function decrypt(data: sjcl.BitArray, encKey?: sjcl.BitArray) {
   } catch (e) {
     throw `DECRYPTION_FAILED:${e}`;
   }
-}
+};

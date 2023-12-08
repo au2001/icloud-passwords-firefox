@@ -1,4 +1,4 @@
-export function fillPassword(username: string, password: string) {
+export const fillPassword = (username: string, password: string) => {
   const warnings: string[] = [];
 
   let passwordInputs = Array.from(
@@ -109,4 +109,4 @@ export function fillPassword(username: string, password: string) {
     success: true,
     warnings,
   };
-}
+};
