@@ -4,12 +4,12 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 module.exports = {
   mode: "development",
   entry: {
-    settings: "./src/settings/index.tsx",
     background: "./src/background/index.ts",
     fill_password: "./src/background/fill-password.ts",
-    popup: "./src/popup/index.tsx",
-    content_script: "./src/content-script/index.ts",
-    suggestions: "./src/suggestions/index.tsx",
+    content_script: "./src/background/content-script.ts",
+    settings: "./src/ui/settings/index.tsx",
+    popup: "./src/ui/popup/index.tsx",
+    suggestions: "./src/ui/suggestions/index.tsx",
   },
   resolve: {
     extensions: [".tsx", ".ts", ".jsx", ".js"],
@@ -45,19 +45,19 @@ module.exports = {
       ],
     }),
     new HtmlWebpackPlugin({
-      template: "./src/settings/index.html",
+      template: "./src/ui/settings/index.html",
       filename: "./settings.html",
       inject: "body",
       chunks: ["settings"],
     }),
     new HtmlWebpackPlugin({
-      template: "./src/popup/index.html",
+      template: "./src/ui/popup/index.html",
       filename: "./popup.html",
       inject: "body",
       chunks: ["popup"],
     }),
     new HtmlWebpackPlugin({
-      template: "./src/suggestions/index.html",
+      template: "./src/ui/suggestions/index.html",
       filename: "./suggestions.html",
       inject: "body",
       chunks: ["suggestions"],

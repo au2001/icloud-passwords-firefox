@@ -4,8 +4,8 @@ import browser from "webextension-polyfill";
 import { useCurrentTab } from "./hooks";
 import { LoadingView } from "./loading";
 import { ErrorView } from "./error";
-import { KeyIcon } from "./icons/key";
-import { CopyIcon } from "./icons/copy";
+import { KeyIcon } from "../shared/icons/key";
+import { CopyIcon } from "../shared/icons/copy";
 import styles from "./passwords.module.scss";
 
 interface LoginName {
