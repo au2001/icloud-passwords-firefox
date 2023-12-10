@@ -4,6 +4,7 @@ import browser from "webextension-polyfill";
 import { useCurrentTab } from "../shared/hooks/use-current-tab";
 import { LoadingView } from "./loading";
 import { ErrorView } from "./error";
+import { Header } from "../shared/header";
 import { KeyIcon } from "../shared/icons/key";
 import { CopyIcon } from "../shared/icons/copy";
 import styles from "./passwords.module.scss";
@@ -100,19 +101,7 @@ export function PasswordsView() {
 
   return (
     <div className={styles.passwords}>
-      <header>
-        <img src="/images/PasswordsExtensionIcon_32.png" alt="" />
-        <h1>iCloud Passwords</h1>
-        <a
-          href="#"
-          onClick={(e) => {
-            e.preventDefault();
-            handleLock();
-          }}
-        >
-          Lock
-        </a>
-      </header>
+      <Header actionLabel="Lock" action={handleLock} />
 
       {loginNames.length > 0 ? (
         <>

@@ -5,8 +5,8 @@ import {
   useRef,
   useState,
 } from "react";
-import { Link } from "react-router-dom";
 import { ErrorView } from "./error";
+import { Header } from "../shared/header";
 import styles from "./generator.module.scss";
 
 export function GeneratorView() {
@@ -105,11 +105,7 @@ export function GeneratorView() {
 
   return (
     <div className={styles.generator}>
-      <header>
-        <img src="/images/PasswordsExtensionIcon_32.png" alt="" />
-        <h1>iCloud Passwords</h1>
-        <Link to="/">Back</Link>
-      </header>
+      <Header actionLabel="Back" actionLink="/" />
 
       <div>
         <h2>Create a strong password:</h2>

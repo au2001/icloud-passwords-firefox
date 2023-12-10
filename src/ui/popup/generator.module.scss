@@ -1,31 +1,6 @@
 @import "./index.scss";
 
 .generator {
-  > header {
-    position: sticky;
-    top: 0;
-
-    display: flex;
-    height: 30px;
-    padding: 0 8px;
-    background-color: $color-background-2;
-    color: $color-text-secondary;
-
-    gap: 8px;
-    align-items: center;
-
-    > img {
-      height: 20px;
-      width: 20px;
-    }
-
-    > h1 {
-      @include font-in-content-body-default;
-
-      flex: 1;
-    }
-  }
-
   > div {
     padding: 20px;
 
