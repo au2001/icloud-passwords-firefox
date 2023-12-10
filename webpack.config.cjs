@@ -6,6 +6,7 @@ module.exports = {
   entry: {
     settings: "./src/settings/index.tsx",
     background: "./src/background/index.ts",
+    fill_password: "./src/background/fill-password.ts",
     popup: "./src/popup/index.tsx",
     content_script: "./src/content-script/index.ts",
     suggestions: "./src/suggestions/index.tsx",

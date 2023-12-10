@@ -1,6 +1,5 @@
 import browser from "webextension-polyfill";
 import { ApplePasswordManager } from "../utils/api";
-import { fillPassword } from "./fill";
 
 const api = new ApplePasswordManager();
 
@@ -63,11 +62,19 @@ browser.runtime.onMessage.addListener(async (message) => {
         if (!tab.active) throw "TAB_INACTIVE";
         if (tab.url !== message.url) throw "TAB_REDIRECTED";
 
+        await browser.scripting.executeScript({
+          target: {
+            tabId: tab.id,
+          },
+          files: ["./fill_password.js"],
+        });
+
         const [{ result, error }] = await browser.scripting.executeScript({
           target: {
             tabId: tab.id,
           },
-          func: fillPassword,
+          func: (username, password) =>
+            window.iCloudPasswordsFill(username, password),
           args: [username, password],
         });
 
