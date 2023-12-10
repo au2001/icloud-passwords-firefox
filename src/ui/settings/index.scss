@@ -1,9 +1,9 @@
-@import "../shared/styles/index.scss";
+@import "../shared/styles";
 
 html {
   background-color: #23222b;
 }
 
-body {
+#root {
   min-height: 250px;
 }
