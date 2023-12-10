@@ -1,0 +1,33 @@
+@import "./colors.scss";
+@import "./fonts.scss";
+
+html {
+  background-color: $color-background-1;
+}
+
+body {
+  @include font-in-content-body-default;
+  color: $color-text-primary;
+
+  font-family:
+    system-ui,
+    -apple-system,
+    "SF Pro Text",
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    "Open Sans",
+    "Helvetica Neue",
+    sans-serif;
+}
+
+a {
+  color: inherit;
+}
+
+* {
+  margin: 0;
+}

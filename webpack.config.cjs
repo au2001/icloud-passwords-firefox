@@ -45,19 +45,19 @@ module.exports = {
       ],
     }),
     new HtmlWebpackPlugin({
-      template: "./src/ui/settings/index.html",
+      template: "./src/ui/index.html",
       filename: "./settings.html",
       inject: "body",
       chunks: ["settings"],
     }),
     new HtmlWebpackPlugin({
-      template: "./src/ui/popup/index.html",
+      template: "./src/ui/index.html",
       filename: "./popup.html",
       inject: "body",
       chunks: ["popup"],
     }),
     new HtmlWebpackPlugin({
-      template: "./src/ui/suggestions/index.html",
+      template: "./src/ui/index.html",
       filename: "./suggestions.html",
       inject: "body",
       chunks: ["suggestions"],

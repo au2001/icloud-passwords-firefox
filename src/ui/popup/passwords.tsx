@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import browser from "webextension-polyfill";
-import { useCurrentTab } from "./hooks";
+import { useCurrentTab } from "../shared/hooks/use-current-tab";
 import { LoadingView } from "./loading";
 import { ErrorView } from "./error";
 import { KeyIcon } from "../shared/icons/key";

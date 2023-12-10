@@ -1,0 +1,99 @@
+@mixin font-chrome-heading-default {
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 150%;
+}
+
+@mixin font-chrome-body-default-bold {
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 150%;
+}
+
+@mixin font-chrome-body-default {
+  font-weight: 400;
+  font-size: 13px;
+  line-height: 150%;
+}
+
+@mixin font-chrome-body-small-bold {
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 150%;
+}
+
+@mixin font-chrome-body-small {
+  font-weight: 400;
+  font-size: 11px;
+  line-height: 150%;
+}
+
+@mixin font-chrome-body-small-link {
+  font-weight: 400;
+  font-size: 11px;
+  line-height: 150%;
+  text-decoration: underline;
+}
+
+@mixin font-chrome-body-xsmall {
+  font-weight: 400;
+  font-size: 8.2px;
+  line-height: 150%;
+  text-transform: uppercase;
+}
+
+@mixin font-in-content-title-default {
+  font-weight: 300;
+  font-size: 26px;
+  line-height: 140%;
+}
+
+@mixin font-in-content-heading-large {
+  font-weight: 400;
+  font-size: 22px;
+  line-height: 140%;
+}
+
+@mixin font-in-content-heading-default {
+  font-weight: 600;
+  font-size: 17px;
+  line-height: 140%;
+}
+
+@mixin font-in-content-body-default-bold {
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 150%;
+}
+
+@mixin font-in-content-body-default {
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 150%;
+}
+
+@mixin font-in-content-body-default-link {
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 150%;
+  text-decoration: underline;
+}
+
+@mixin font-in-content-body-small-bold {
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 150%;
+}
+
+@mixin font-in-content-body-small {
+  font-weight: 400;
+  font-size: 13px;
+  line-height: 150%;
+}
+
+@mixin font-in-content-body-small-link {
+  font-weight: 400;
+  font-size: 13px;
+  line-height: 150%;
+  text-decoration: underline;
+}

@@ -1,60 +1,9 @@
-$color-accent-primary: #00ddff;
-$color-background-1: #2b2a33;
-$color-background-2: #42414d;
-$color-background-3: #1c1b22;
-$color-text-primary: #fbfbfe;
-$color-text-secondary: #cfcfd8;
-$color-text-disabled: rgba(251, 251, 254, 0.4);
-$color-text-error: #ff9aa2;
-$color-border-primary: #e0e0e6;
-$color-button-primary: #15141a;
-
-$font-chrome-heading-default: "SF Pro Text Semibold 13px/150%";
-$font-chrome-body-default-bold: "SF Pro Text Semibold 13px/150%";
-$font-chrome-body-default: "SF Pro Text Regular 13px/150%";
-$font-chrome-body-small-bold: "SF Pro Text Semibold 11px/150%";
-$font-chrome-body-small: "SF Pro Text Regular 11px/150%";
-$font-chrome-body-small-link: "SF Pro Text Regular 11px/150%, underline";
-$font-chrome-body-xsmall: "SF Pro Text Regular 8.2px/150%, upper";
-$font-in-content-title-default: "SF Pro Text Light 26px/140%";
-$font-in-content-heading-large: "SF Pro Text Regular 22px/140%";
-$font-in-content-heading-default: "SF Pro Text Semibold 17px/140%";
-$font-in-content-body-default-bold: "SF Pro Text Semibold 15px/150%";
-$font-in-content-body-default: "SF Pro Text Regular 15px/150%";
-$font-in-content-body-default-link: "SF Pro Text Regular 15px/150%, underline";
-$font-in-content-body-small-bold: "SF Pro Text Semibold 13px/150%";
-$font-in-content-body-small: "SF Pro Text Regular 13px/150%";
-$font-in-content-body-small-link: "SF Pro Text Regular 13px/150%, underline";
+@import "../shared/styles/index.scss";
 
 html {
   background-color: #23222b;
 }
 
 body {
-  margin: 0;
   min-height: 250px;
-
-  // TODO: $font-in-content-body-default
-  font-size: 15px;
-  line-height: 150%;
-  font-weight: 400;
-  color: $color-text-primary;
-
-  font-family:
-    system-ui,
-    -apple-system,
-    "SF Pro Text",
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    Oxygen,
-    Ubuntu,
-    Cantarell,
-    "Open Sans",
-    "Helvetica Neue",
-    sans-serif;
-}
-
-a {
-  color: inherit;
 }

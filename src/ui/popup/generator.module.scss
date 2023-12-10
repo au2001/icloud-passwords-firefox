@@ -20,12 +20,8 @@
     }
 
     > h1 {
-      // TODO: $font-in-content-body-default
-      font-size: 15px;
-      line-height: 150%;
-      font-weight: 400;
+      @include font-in-content-body-default;
 
-      margin: 0;
       flex: 1;
     }
   }
@@ -34,27 +30,19 @@
     padding: 20px;
 
     > h2 {
-      // TODO: $font-in-content-body-default
-      font-size: 15px;
-      line-height: 150%;
-      font-weight: 400;
+      @include font-in-content-body-default;
       color: $color-text-primary;
 
-      margin: 0;
       margin-bottom: 10px;
     }
 
     > input {
-      color: inherit;
-
       width: 100%;
       padding: 8px;
       box-sizing: border-box;
 
-      // TODO: $font-in-content-title-default
-      font-size: 26px;
-      line-height: 140%;
-      font-weight: 300;
+      @include font-in-content-title-default;
+      color: inherit;
 
       font-variant-numeric: slashed-zero;
       text-align: center;
@@ -76,17 +64,14 @@
         height: 30px;
 
         background-color: $color-background-2;
-        color: $color-text-primary;
         border: none;
         border-radius: 3px;
 
         text-align: center;
         cursor: pointer;
 
-        // TODO: $font-in-content-body-small-bold
-        font-size: 13px;
-        line-height: 150%;
-        font-weight: 600;
+        @include font-in-content-body-small-bold;
+        color: $color-text-primary;
 
         &:first-child {
           background-color: $color-accent-primary;

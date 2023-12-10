@@ -12,32 +12,21 @@
 
   > div {
     > h1 {
-      // TODO: $font-in-content-heading-default
-      font-size: 17px;
-      line-height: 140%;
-      font-weight: 600;
-
-      margin: 0;
+      @include font-in-content-heading-default;
     }
 
     > p {
       color: $color-text-secondary;
-
-      margin: 0;
     }
 
     > input {
-      color: inherit;
-
       margin-top: 20px;
       width: 100%;
       padding: 8px;
       box-sizing: border-box;
 
-      // TODO: $font-in-content-title-default
-      font-size: 26px;
-      line-height: 140%;
-      font-weight: 300;
+      @include font-in-content-title-default;
+      color: inherit;
 
       font-variant-numeric: tabular-nums;
       text-align: center;
