@@ -40,6 +40,17 @@
       "all_frames": true
     }
   ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "/suggestions.html",
+        "/suggestions.js",
+        "/suggestions.js.map"
+      ],
+      "extension_ids": ["*"],
+      "matches": ["*://*/*"]
+    }
+  ],
   "browser_specific_settings": {
     "gecko": {
       "id": "password-manager-firefox-extension@apple.com"

@@ -74,7 +74,7 @@ browser.runtime.onMessage.addListener(async (message) => {
         if (error !== undefined) throw error;
 
         const { success, warnings } = result;
-        (warnings as string[]).forEach((warning) => {
+        for (const warning of warnings as string[]) {
           switch (warning) {
             case "MULTIPLE_PASSWORD_FIELDS":
               console.warn(
@@ -91,7 +91,7 @@ browser.runtime.onMessage.addListener(async (message) => {
             default:
               console.warn(warning);
           }
-        });
+        }
 
         return {
           success,

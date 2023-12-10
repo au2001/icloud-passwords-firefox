@@ -66,7 +66,7 @@ export function PasswordsView() {
 
       if (error !== undefined || !success) throw error;
 
-      (warnings as string[]).forEach((warning) => console.warn(warning));
+      for (const warning of warnings as string[]) console.warn(warning);
     } catch (e: any) {
       setError(e);
     }

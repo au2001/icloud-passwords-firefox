@@ -8,6 +8,7 @@ module.exports = {
     background: "./src/background/index.ts",
     popup: "./src/popup/index.tsx",
     content_script: "./src/content-script/index.ts",
+    suggestions: "./src/suggestions/index.tsx",
   },
   resolve: {
     extensions: [".tsx", ".ts", ".jsx", ".js"],
@@ -53,6 +54,12 @@ module.exports = {
       filename: "./popup.html",
       inject: "body",
       chunks: ["popup"],
+    }),
+    new HtmlWebpackPlugin({
+      template: "./src/suggestions/index.html",
+      filename: "./suggestions.html",
+      inject: "body",
+      chunks: ["suggestions"],
     }),
   ],
   devtool: "source-map",
