@@ -34,7 +34,7 @@ window.iCloudPasswordsFill = async (username, password) => {
     );
 
     // React >= 15.6
-    var nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
       HTMLInputElement.prototype,
       "value",
     )?.set;

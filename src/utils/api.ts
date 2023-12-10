@@ -90,8 +90,6 @@ export class ApplePasswordManager extends EventEmitter {
 
   private async _readResponse<T extends Command>(cmd: T) {
     return await new Promise((resolve, reject) => {
-      let port: browser.Runtime.Port;
-
       const callback = async (response: object) => {
         if (!("cmd" in response) || response.cmd !== cmd) return;
 
@@ -159,7 +157,7 @@ export class ApplePasswordManager extends EventEmitter {
       };
 
       this.addListener("error", onError);
-      port = this._connect();
+      const port = this._connect();
       port.onMessage.addListener(callback);
     });
   }
@@ -175,15 +173,13 @@ export class ApplePasswordManager extends EventEmitter {
       response = this._readResponse(cmd);
     } else {
       response = new Promise<void>((resolve, reject) => {
-        let timeout: NodeJS.Timeout;
-
         const onError = (error: string | null) => {
           this.removeListener("error", onError);
           clearTimeout(timeout);
           return reject(error);
         };
 
-        timeout = setTimeout(() => {
+        const timeout = setTimeout(() => {
           this.removeListener("error", onError);
           resolve();
         }, 200);
@@ -335,7 +331,7 @@ export class ApplePasswordManager extends EventEmitter {
     const msg: Record<string, string> = {};
     let hamk;
     switch (capabilities.secretSessionVersion) {
-      case SecretSessionVersion.SRPWithRFCVerification:
+      case SecretSessionVersion.SRPWithRFCVerification: {
         let m;
         [m, hamk] = calculateM(
           pake,
@@ -347,6 +343,7 @@ export class ApplePasswordManager extends EventEmitter {
 
         msg.M = bitsToString(m, false, capabilities.shouldUseBase64);
         break;
+      }
 
       case SecretSessionVersion.SRPWithOldVerification:
         msg.v = bitsToString(
@@ -415,7 +412,7 @@ export class ApplePasswordManager extends EventEmitter {
     }
 
     switch (capabilities.secretSessionVersion) {
-      case SecretSessionVersion.SRPWithRFCVerification:
+      case SecretSessionVersion.SRPWithRFCVerification: {
         if (!pake2.HAMK) {
           throw "MISSING_HAMK";
         }
@@ -423,6 +420,7 @@ export class ApplePasswordManager extends EventEmitter {
         const a = stringToBits(pake2.HAMK, capabilities.shouldUseBase64);
         if (!sjcl.bitArray.equal(a, hamk!)) throw `INVALID_HAMK:${pake2.HAMK}`;
         break;
+      }
 
       case SecretSessionVersion.SRPWithOldVerification:
         break;

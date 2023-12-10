@@ -72,10 +72,11 @@ export function GeneratorView() {
         setCopied(true);
         break;
 
-      case true:
+      case true: {
         // Wait for timeout to reset state
         const timeout = setTimeout(() => setCopied(undefined), 1000);
         return () => clearTimeout(timeout);
+      }
 
       default:
         // Not copied, nothing to do

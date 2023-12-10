@@ -9,6 +9,7 @@ interface Props {
 export function ErrorView({ error }: Props) {
   const message = useMemo(() => {
     const [code, param] = error?.toString().split(":", 2) ?? [];
+    param;
 
     switch (code) {
       case "LOADING_TIMED_OUT":
@@ -33,7 +34,7 @@ export function ErrorView({ error }: Props) {
         } else {
           let downloadUrl: string | undefined;
 
-          let windowsVersion = /\(Windows\s*\w*\s*(\d+)[\._](\d+)/i.exec(
+          const windowsVersion = /\(Windows\s*\w*\s*(\d+)[._](\d+)/i.exec(
             navigator.userAgent,
           );
           if (windowsVersion !== null && windowsVersion.length !== 3) {
@@ -180,7 +181,9 @@ export function ErrorView({ error }: Props) {
       await browser.runtime.sendMessage({
         cmd: "LOCK",
       });
-    } catch (e) {}
+    } catch (e) {
+      // Can't do much, we'll try reloading the page anyway
+    }
 
     window.location.reload();
   };

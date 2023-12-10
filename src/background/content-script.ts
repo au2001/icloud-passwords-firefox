@@ -2,9 +2,11 @@ import browser from "webextension-polyfill";
 import { LoginForm, getLoginForms } from "../utils/dom";
 import { throttle } from "../utils/timings";
 
-let observing = new Map<HTMLInputElement, () => void>();
+const observing = new Map<HTMLInputElement, () => void>();
 
 const observe = (input: HTMLInputElement, form: LoginForm) => {
+  form;
+
   let iframe: HTMLIFrameElement | undefined;
 
   const onFocus = () => {
