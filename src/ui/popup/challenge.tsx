@@ -76,7 +76,7 @@ export function ChallengeView({ setReady }: Props) {
     <div className={styles.challenge}>
       <img src="/images/PasswordsExtensionIcon_128.png" alt="" />
       <div>
-        <h1>Enable Password AutoFill</h1>
+        <h1>Enable Password Auto-Fill</h1>
         <p>
           {navigator.platform === "MacIntel" ? (
             <>

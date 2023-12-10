@@ -42,11 +42,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": [
-        "/suggestions.html",
-        "/suggestions.js",
-        "/suggestions.js.map"
-      ],
+      "resources": ["/in_page.html", "/in_page.js", "/in_page.js.map"],
       "extension_ids": ["*"],
       "matches": ["*://*/*"]
     }

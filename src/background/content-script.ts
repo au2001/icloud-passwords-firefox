@@ -11,7 +11,7 @@ const observe = (input: HTMLInputElement, form: LoginForm) => {
     if (iframe !== undefined) return;
 
     iframe = document.createElement("iframe");
-    iframe.src = browser.runtime.getURL("./suggestions.html");
+    iframe.src = browser.runtime.getURL("./in_page.html");
 
     const style = {
       "z-index": "2147483647",

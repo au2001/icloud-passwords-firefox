@@ -3,7 +3,7 @@ import browser from "webextension-polyfill";
 import styles from "./settings.module.scss";
 
 interface Settings {
-  autoFill?: boolean;
+  inPage?: boolean;
 }
 
 export function SettingsView() {
@@ -77,8 +77,8 @@ export function SettingsView() {
     return () => browser.permissions.onAdded.removeListener(listener);
   }, []);
 
-  const setAutoFill = async (autoFill: boolean) => {
-    if (autoFill) {
+  const setInPage = async (inPage: boolean) => {
+    if (inPage) {
       const success = await browser.permissions.request({
         permissions: ["tabs"],
         origins: ["<all_urls>"],
@@ -97,7 +97,7 @@ export function SettingsView() {
     await browser.storage.sync.set({
       settings: {
         ...settings,
-        autoFill,
+        inPage,
       },
     });
   };
@@ -106,17 +106,17 @@ export function SettingsView() {
     <form className={styles.settings}>
       <fieldset>
         <input
-          id="auto-fill"
+          id="in-page"
           type="checkbox"
           checked={
-            (settings.autoFill &&
+            (settings.inPage &&
               permissions.permissions?.includes("tabs") &&
               permissions.origins?.includes("<all_urls>")) ??
             false
           }
-          onChange={(e) => setAutoFill(e.target.checked)}
+          onChange={(e) => setInPage(e.target.checked)}
         />
-        <label htmlFor="auto-fill">Ask to auto-fill on login forms</label>
+        <label htmlFor="in-page">In-Page Auto-Fill</label>
       </fieldset>
     </form>
   );

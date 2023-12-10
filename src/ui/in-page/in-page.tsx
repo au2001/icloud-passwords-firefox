@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import browser from "webextension-polyfill";
 
-export function SuggestionsView() {
+export function InPageView() {
   const [ready, setReady] = useState<boolean>();
   const [error, setError] = useState<string>();
 

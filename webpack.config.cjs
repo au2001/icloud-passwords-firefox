@@ -9,7 +9,7 @@ module.exports = {
     content_script: "./src/background/content-script.ts",
     settings: "./src/ui/settings/index.tsx",
     popup: "./src/ui/popup/index.tsx",
-    suggestions: "./src/ui/suggestions/index.tsx",
+    in_page: "./src/ui/in-page/index.tsx",
   },
   resolve: {
     extensions: [".tsx", ".ts", ".jsx", ".js"],
@@ -58,9 +58,9 @@ module.exports = {
     }),
     new HtmlWebpackPlugin({
       template: "./src/ui/index.html",
-      filename: "./suggestions.html",
+      filename: "./in_page.html",
       inject: "body",
-      chunks: ["suggestions"],
+      chunks: ["in_page"],
     }),
   ],
   devtool: "source-map",
