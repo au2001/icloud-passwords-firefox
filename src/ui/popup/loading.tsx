@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import styles from "./loading.module.scss";
 import { ErrorView } from "./error";
+import styles from "./loading.module.scss";
 
 const TIME_OUT = 10 * 1000;
 const DOT_INTERVAL = 800;

@@ -1,4 +1,4 @@
-import { HashRouter, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { useReady } from "../shared/hooks/use-ready";
 import { ChallengeView } from "./challenge";
 import { PasswordsView } from "./passwords";
@@ -15,12 +15,10 @@ export function PopupView() {
   return (
     <>
       {ready ? (
-        <HashRouter>
-          <Routes>
-            <Route index Component={PasswordsView} />
-            <Route path="/generate" Component={GeneratorView} />
-          </Routes>
-        </HashRouter>
+        <Routes>
+          <Route index Component={PasswordsView} />
+          <Route path="/generate" Component={GeneratorView} />
+        </Routes>
       ) : (
         <ChallengeView setReady={() => refetch()} />
       )}
