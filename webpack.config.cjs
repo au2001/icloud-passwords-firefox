@@ -4,13 +4,17 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 module.exports = {
   mode: "development",
   entry: {
-    background: "./src/background.ts",
-    popup: "./src/popup/index.tsx",
+    background: "./src/background/index.ts",
+    fill_password: "./src/background/fill-password.ts",
+    content_script: "./src/background/content-script.ts",
+    settings: "./src/ui/settings/index.tsx",
+    popup: "./src/ui/popup/index.tsx",
+    in_page: "./src/ui/in-page/index.tsx",
   },
   resolve: {
     extensions: [".tsx", ".ts", ".jsx", ".js"],
     alias: {
-      sjcl: "./sjcl.cjs",
+      sjcl: "/lib/sjcl.cjs",
     },
     fallback: {
       crypto: false,
@@ -41,10 +45,22 @@ module.exports = {
       ],
     }),
     new HtmlWebpackPlugin({
-      template: "./src/popup/index.html",
+      template: "./src/ui/index.html",
+      filename: "./settings.html",
+      inject: "body",
+      chunks: ["settings"],
+    }),
+    new HtmlWebpackPlugin({
+      template: "./src/ui/index.html",
       filename: "./popup.html",
       inject: "body",
       chunks: ["popup"],
+    }),
+    new HtmlWebpackPlugin({
+      template: "./src/ui/index.html",
+      filename: "./in_page.html",
+      inject: "body",
+      chunks: ["in_page"],
     }),
   ],
   devtool: "source-map",

@@ -1,0 +1,11 @@
+@import "../shared/styles/lib";
+
+.error {
+  padding: 20px;
+  text-align: center;
+  color: $color-text-error;
+
+  > h1 {
+    @include font-in-content-heading-large;
+  }
+}

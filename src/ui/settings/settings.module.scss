@@ -1,0 +1,14 @@
+.settings {
+  overflow: auto;
+
+  > fieldset {
+    padding: 0;
+    border: none;
+
+    margin: 10px 0;
+
+    > label {
+      margin-left: 5px;
+    }
+  }
+}

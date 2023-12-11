@@ -1,0 +1,19 @@
+@import "../shared/styles/lib";
+
+.challenge {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  justify-content: center;
+
+  padding: 20px;
+  gap: 5px;
+
+  > h1 {
+    @include font-in-content-heading-default;
+  }
+
+  > p {
+    color: $color-text-secondary;
+  }
+}
