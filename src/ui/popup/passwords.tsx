@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import browser from "webextension-polyfill";
 import { useCurrentTab } from "../shared/hooks/use-current-tab";
+import { LoginName, useLoginNames } from "../shared/hooks/use-login-names";
 import { LoadingView } from "./loading";
 import { ErrorView } from "./error";
 import { Header } from "../shared/header";
@@ -9,43 +10,10 @@ import { KeyIcon } from "../shared/icons/key";
 import { CopyIcon } from "../shared/icons/copy";
 import styles from "./passwords.module.scss";
 
-interface LoginName {
-  username: string;
-  sites: string[];
-}
-
 export function PasswordsView() {
   const tab = useCurrentTab();
-  const [loginNames, setLoginNames] = useState<LoginName[]>();
-  const [error, setError] = useState<string>();
-
-  const fetchLoginNames = async (tabId: number, url: string) => {
-    setLoginNames(undefined);
-    setError(undefined);
-
-    if (new URL(url).hostname === "") return;
-
-    try {
-      const { success, loginNames, error } = await browser.runtime.sendMessage({
-        cmd: "GET_LOGIN_NAMES_FOR_URL",
-        tabId,
-        url,
-      });
-
-      if (error !== undefined || !success) throw error;
-
-      setLoginNames(loginNames);
-    } catch (e: any) {
-      setError(e);
-    }
-  };
-
-  useEffect(() => {
-    if (tab?.id === undefined || tab?.url === undefined) return;
-
-    // Refresh passwords list every time the URL changes
-    fetchLoginNames(tab.id, tab.url);
-  }, [tab?.url]);
+  const { loginNames, error } = useLoginNames(tab?.id, tab?.url);
+  const [fillError, setFillError] = useState<string>();
 
   const handleFillPassword = async (
     loginName: LoginName,
@@ -53,7 +21,7 @@ export function PasswordsView() {
   ) => {
     if (tab?.id === undefined || tab?.url === undefined) return;
 
-    setError(undefined);
+    setFillError(undefined);
 
     try {
       // Can't use GET_PASSWORD_FOR_LOGIN_NAME here
@@ -69,12 +37,12 @@ export function PasswordsView() {
 
       for (const warning of warnings as string[]) console.warn(warning);
     } catch (e: any) {
-      setError(e);
+      setFillError(e);
     }
   };
 
   const handleLock = async () => {
-    setError(undefined);
+    setFillError(undefined);
 
     try {
       const { success, error } = await browser.runtime.sendMessage({
@@ -87,11 +55,12 @@ export function PasswordsView() {
       // Next time the user opens the extension, they will see the challenge view automatically
       window.close();
     } catch (e: any) {
-      setError(e);
+      setFillError(e);
     }
   };
 
   if (error !== undefined) return <ErrorView error={error} />;
+  if (fillError !== undefined) return <ErrorView error={fillError} />;
   if (tab?.id === undefined || tab?.url === undefined)
     return <LoadingView action="CURRENT_TAB" />;
   if (new URL(tab.url).hostname === "")
@@ -108,7 +77,7 @@ export function PasswordsView() {
           <h2>Choose a saved password to use:</h2>
 
           <ul>
-            {loginNames?.map((loginName, i) => (
+            {loginNames.map((loginName, i) => (
               <li
                 key={i}
                 onClick={(e) => {
