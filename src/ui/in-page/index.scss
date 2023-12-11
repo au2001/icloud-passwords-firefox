@@ -1,5 +1,12 @@
 @import "../shared/styles";
 
+html,
 body {
-  min-height: 200px;
+  height: 100%;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
 }

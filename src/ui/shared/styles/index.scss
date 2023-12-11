@@ -1,6 +1,7 @@
 @import "./lib";
 
 html {
+  overscroll-behavior: none;
   background-color: $color-background-1;
 }
 

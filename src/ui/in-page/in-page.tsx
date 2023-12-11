@@ -1,30 +1,35 @@
-import { useEffect, useState } from "react";
-import browser from "webextension-polyfill";
+import { useLocation } from "react-router-dom";
+import { Header } from "../shared/header";
+import { useReady } from "../shared/hooks/use-ready";
+import { ChallengeView } from "./challenge";
+import { SuggestionsView } from "./suggestions";
 
 export function InPageView() {
-  const [ready, setReady] = useState<boolean>();
-  const [error, setError] = useState<string>();
+  const { pathname } = useLocation();
+  const { ready, error } = useReady();
 
-  const checkReady = async () => {
-    try {
-      const { success, ready, error } = await browser.runtime.sendMessage({
-        cmd: "IS_READY",
-      });
-
-      if (error !== undefined || !success) throw error;
-
-      setReady(ready);
-    } catch (e: any) {
-      setError(e);
-    }
-  };
-
-  useEffect(() => {
-    checkReady();
-  }, []);
+  const search = new URLSearchParams(pathname.substring(1));
+  const tabId = parseInt(search.get("t") ?? "-1");
+  const url = search.get("u") ?? window.location.href;
+  const isPassword = search.get("p") === "1";
+  const query = search.get("q") ?? "";
 
   if (error !== undefined) return <p>Error: {error}</p>;
   if (ready === undefined) return <p>Loading...</p>;
 
-  return <>{ready ? <p>Suggestions:</p> : <p>Please login</p>}</>;
+  return (
+    <>
+      <Header />
+      {ready ? (
+        <SuggestionsView
+          tabId={tabId}
+          url={url}
+          isPassword={isPassword}
+          query={query}
+        />
+      ) : (
+        <ChallengeView />
+      )}
+    </>
+  );
 }
