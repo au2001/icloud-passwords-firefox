@@ -1,7 +1,6 @@
 @import "../shared/styles/lib";
 
 .header {
-  position: sticky;
   top: 0;
 
   display: flex;
@@ -22,5 +21,9 @@
     @include font-in-content-body-default;
 
     flex: 1;
+  }
+
+  &.sticky {
+    position: sticky;
   }
 }

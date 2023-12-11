@@ -106,7 +106,7 @@ export function GeneratorView() {
 
   return (
     <div className={styles.generator}>
-      <Header actionLabel="Back" actionLink="/" />
+      <Header sticky actionLabel="Back" actionLink="/" />
 
       <div>
         <h2>Create a strong password:</h2>

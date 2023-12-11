@@ -70,7 +70,7 @@ export function PasswordsView() {
 
   return (
     <div className={styles.passwords}>
-      <Header actionLabel="Lock" action={handleLock} />
+      <Header sticky actionLabel="Lock" action={handleLock} />
 
       {loginNames.length > 0 ? (
         <>
