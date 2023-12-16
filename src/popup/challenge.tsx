@@ -74,7 +74,7 @@ export function ChallengeView({ setReady }: Props) {
 
   return (
     <div className={styles.challenge}>
-      <img src="/images/PasswordsExtensionIcon_128.png" alt="" />
+      <img src="/images/logo-128.png" alt="" />
       <div>
         <h1>Enable Password AutoFill</h1>
         <p>

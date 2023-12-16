@@ -4,7 +4,6 @@ import browser from "webextension-polyfill";
 import { useCurrentTab } from "./hooks";
 import { LoadingView } from "./loading";
 import { ErrorView } from "./error";
-import { KeyIcon } from "./icons/key";
 import { CopyIcon } from "./icons/copy";
 import styles from "./passwords.module.scss";
 
@@ -101,7 +100,7 @@ export function PasswordsView() {
   return (
     <div className={styles.passwords}>
       <header>
-        <img src="/images/PasswordsExtensionIcon_32.png" alt="" />
+        <img src="/images/logo-32.png" alt="" />
         <h1>iCloud Passwords</h1>
         <a
           href="#"
@@ -127,7 +126,6 @@ export function PasswordsView() {
                   handleAutoFillPassword(loginName);
                 }}
               >
-                <KeyIcon title="Password item" />
                 <div>
                   <span>{loginName.username}</span>
                   <span>{loginName.sites[0] ?? ""}</span>

@@ -6,15 +6,15 @@
   "manifest_version": 3,
   "action": {
     "default_icon": {
-      "16": "./images/PasswordsToolbar_icon16.png",
-      "32": "./images/PasswordsToolbar_icon32.png"
+      "16": "./images/logo-16.png",
+      "32": "./images/logo-32.png"
     },
     "default_popup": "./popup.html"
   },
   "icons": {
-    "16": "./images/PasswordsExtensionIcon_16.png",
-    "32": "./images/PasswordsExtensionIcon_32.png",
-    "128": "./images/PasswordsExtensionIcon_128.png"
+    "16": "./images/logo-16.png",
+    "32": "./images/logo-32.png",
+    "128": "./images/logo-128.png"
   },
   "permissions": [
     "nativeMessaging",

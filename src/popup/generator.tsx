@@ -106,7 +106,7 @@ export function GeneratorView() {
   return (
     <div className={styles.generator}>
       <header>
-        <img src="/images/PasswordsExtensionIcon_32.png" alt="" />
+        <img src="/images/logo-32.png" alt="" />
         <h1>iCloud Passwords</h1>
         <Link to="/">Back</Link>
       </header>
