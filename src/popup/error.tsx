@@ -22,23 +22,23 @@ export function ErrorView({ error }: Props) {
       case "AUTO_FILL_TAB_INACTIVE":
         return (
           <>
-            The tab you were auto-filling on is no longer active. Auto-fill was
-            cancelled.
+            The tab you were trying to AutoFill on is no longer active. AutoFill
+            was cancelled.
           </>
         );
 
       case "AUTO_FILL_TAB_NOT_FOUND":
         return (
           <>
-            The tab you were auto-filling on no longer exists. Auto-fill was
-            cancelled.
+            The tab you were trying to AutoFill on no longer exists. AutoFill
+            was cancelled.
           </>
         );
 
       case "AUTO_FILL_TAB_REDIRECTED":
         return (
           <>
-            The tab you were auto-filling on changed URL. Auto-fill was
+            The tab you were trying to AutoFill on changed URL. AutoFill was
             cancelled.
           </>
         );
@@ -46,7 +46,7 @@ export function ErrorView({ error }: Props) {
       case "LOADING_TIMED_OUT":
         return (
           <>
-            iCloud Passwords failed to respond in time. Please try reinstalling
+            iCloud Keychain failed to respond in time. Please try reinstalling
             the extension.
           </>
         );
@@ -58,7 +58,7 @@ export function ErrorView({ error }: Props) {
         ) {
           return (
             <>
-              iCloud Passwords requires macOS Sonoma or later to be installed.
+              This extension requires macOS Sonoma or later to be installed.
               Please upgrade to be able to use this extension.
             </>
           );
@@ -84,8 +84,8 @@ export function ErrorView({ error }: Props) {
           if (downloadUrl !== undefined) {
             return (
               <>
-                iCloud Passwords requires iCloud for Windows to be installed.
-                You can download it{" "}
+                This extension requires iCloud for Windows to be installed. You
+                can download it{" "}
                 <a href={downloadUrl} target="_blank" rel="noopener noreferrer">
                   here
                 </a>
@@ -95,7 +95,7 @@ export function ErrorView({ error }: Props) {
           } else {
             return (
               <>
-                iCloud Passwords is designed to run on Windows 10 or later.
+                This extension requires Windows 10 or later to be installed.
                 Please upgrade to be able to use this extension.
               </>
             );
@@ -130,10 +130,26 @@ export function ErrorView({ error }: Props) {
         return <>This account could not be found.</>;
 
       case "UNKNOWN_PROTOCOL_VERSION":
-        return <>iCloud Passwords cannot save passwords on this website.</>;
+        if (
+          navigator.platform === "MacIntel" ||
+          navigator.userAgent.includes("Intel Mac OS X")
+        ) {
+          return (
+            <>
+              This extension is not yet compatible with your version of macOS.
+            </>
+          );
+        } else {
+          return (
+            <>
+              This extension is not yet compatible with your version of iCloud
+              for Windows.
+            </>
+          );
+        }
 
       case "URL_NOT_COMPATIBLE":
-        return <>iCloud Passwords cannot save passwords on this website.</>;
+        return <>Passwords cannot be saved on this website.</>;
 
       case "LOCKED":
         break;

@@ -101,7 +101,7 @@ export function PasswordsView() {
     <div className={styles.passwords}>
       <header>
         <img src="/images/logo-32.png" alt="" />
-        <h1>iCloud Passwords</h1>
+        <h1>Passwords</h1>
         <a
           href="#"
           onClick={(e) => {
@@ -115,7 +115,7 @@ export function PasswordsView() {
 
       {loginNames.length > 0 ? (
         <>
-          <h2>Choose a saved password to use:</h2>
+          <h2>Select an account to login with:</h2>
 
           <ul>
             {loginNames?.map((loginName, i) => (

@@ -46,7 +46,8 @@ export class ApplePasswordManager {
       this.port.onDisconnect.addListener((port) => {
         if (this.port !== port) return;
 
-        const message = port.error?.message ?? browser.runtime.lastError?.message;
+        const message =
+          port.error?.message ?? browser.runtime.lastError?.message;
 
         let error;
         switch (message) {

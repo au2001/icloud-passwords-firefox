@@ -1,8 +1,8 @@
 {
-  "name": "iCloud Passwords",
+  "name": "Keychain Passwords for macOS",
   "version": "1.0.2",
-  "description": "iCloud Passwords lets you fill passwords from iCloud Keychain when signing in to websites using Firefox.",
-  "author": "Aurélien Garnier",
+  "description": "Use your passwords stored on iCloud Keychain® right from Firefox.",
+  "author": "Aurélien",
   "manifest_version": 3,
   "action": {
     "default_icon": {
@@ -22,8 +22,6 @@
     "scripting",
     "clipboardWrite"
   ],
-  "optional_permissions": ["tabs"],
-  "host_permissions": ["*://*/*"],
   "background": {
     "scripts": ["./background.js"]
   },
