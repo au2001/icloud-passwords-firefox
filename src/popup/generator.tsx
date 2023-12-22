@@ -107,7 +107,7 @@ export function GeneratorView() {
     <div className={styles.generator}>
       <header>
         <img src="/images/logo-32.png" alt="" />
-        <h1>Passwords</h1>
+        <h1>Keychain Passwords</h1>
         <Link to="/">Back</Link>
       </header>
 
