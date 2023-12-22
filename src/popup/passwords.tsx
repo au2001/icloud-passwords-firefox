@@ -101,7 +101,7 @@ export function PasswordsView() {
     <div className={styles.passwords}>
       <header>
         <img src="/images/logo-32.png" alt="" />
-        <h1>Passwords</h1>
+        <h1>Keychain Passwords</h1>
         <a
           href="#"
           onClick={(e) => {

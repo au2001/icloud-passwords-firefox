@@ -1,16 +1,16 @@
 export function autoFillPassword(username: string, password: string) {
   const warnings: string[] = [];
 
-  let passwordInputs = Array.from(
-    document.querySelectorAll<HTMLInputElement>(
+  let passwordInputs = [
+    ...document.querySelectorAll<HTMLInputElement>(
       "input[autocomplete=current-password]",
     ),
-  ).filter((input) => input.checkVisibility());
+  ].filter((input) => input.checkVisibility());
 
   if (passwordInputs.length === 0) {
-    passwordInputs = Array.from(
-      document.querySelectorAll<HTMLInputElement>("input[type=password]"),
-    ).filter((input) => input.checkVisibility());
+    passwordInputs = [
+      ...document.querySelectorAll<HTMLInputElement>("input[type=password]"),
+    ].filter((input) => input.checkVisibility());
   }
 
   if (passwordInputs.length === 0) {
