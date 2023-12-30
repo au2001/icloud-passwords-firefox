@@ -8,7 +8,7 @@ import {
   SecretSessionVersion,
 } from "./enums";
 import { SRPSession } from "./srp";
-import { readBigInt, throwQueryStatusError, toBase64 } from "./utils";
+import { readBigInt, throwQueryStatusError, toBase64, toBuffer } from "./utils";
 
 const BROWSER_NAME = "Firefox";
 const VERSION = "1.0";
@@ -21,7 +21,6 @@ export class ApplePasswordManager {
   private lock = false;
 
   get ready() {
-    // TODO: Check if encryption key has successfully been acquired
     return (
       this.port !== undefined &&
       this.session !== undefined &&
@@ -194,13 +193,15 @@ export class ApplePasswordManager {
 
     await this.session.setSharedKey(password);
 
+    const m = await this.session.computeM();
+
     const { payload } = await this._postMessage(Command.HANDSHAKE, {
       msg: {
         QID: "m2",
         PAKE: toBase64({
           TID: this.session.username,
           MSG: MSGTypes.CLIENT_VERIFICATION,
-          M: toBase64(await this.session.computeM()),
+          M: toBase64(m),
         }),
       },
     });
@@ -233,8 +234,9 @@ export class ApplePasswordManager {
       }
     }
 
-    // TODO: Verify HAMK
-    console.log("HAMK", pake.HAMK);
+    const hmac = await this.session.computeHMAC(m);
+    if (readBigInt(Buffer.from(pake.HAMK, "base64")) !== readBigInt(hmac))
+      throw new Error("Invalid server verification: HAMK mismatch");
   }
 
   async sendActiveTab(tabId: number, active: boolean) {
