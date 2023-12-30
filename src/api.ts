@@ -1,511 +1,304 @@
-import sjcl from "sjcl";
-import * as utils from "./utils";
 import browser, { Runtime } from "webextension-polyfill";
+import { Buffer } from "buffer";
 import {
   Action,
-  BROWSER_NAME,
   Command,
-  GRP,
-  KEY_LEN,
   MSGTypes,
   QueryStatus,
   SecretSessionVersion,
-} from "./constants";
+} from "./enums";
+import { SRPSession } from "./srp";
+import { readBigInt, throwQueryStatusError, toBase64 } from "./utils";
+
+const BROWSER_NAME = "Firefox";
+const VERSION = "1.0";
 
 export class ApplePasswordManager {
   private readonly events = new EventTarget();
-  private readonly tid: sjcl.BigNumber;
-  private readonly a: sjcl.BigNumber;
 
   private port?: Runtime.Port;
-  private capabilities?: {
-    shouldUseBase64: boolean;
-    secretSessionVersion: SecretSessionVersion;
-    canFillOneTimeCodes?: boolean;
-    operatingSystem: {
-      majorVersion?: number;
-      minorVersion?: number;
-      name?: string;
-    };
-    supportsSubURLs: boolean;
-    scanForOTPURI: boolean;
-  };
-  private verifier?: sjcl.BigNumber;
-  private encKey?: sjcl.BitArray;
+  private session?: SRPSession;
+  private lock = false;
 
-  constructor() {
-    // Setup SecureRemotePassword (SRP)
-    this.tid = sjcl.bn.fromBits(utils.randomWords(4));
-    this.a = sjcl.bn.fromBits(utils.randomWords(8));
+  get ready() {
+    // TODO: Check if encryption key has successfully been acquired
+    return (
+      this.port !== undefined &&
+      this.session !== undefined &&
+      this.session.serverPublicKey !== undefined &&
+      this.session.salt !== undefined &&
+      this.session.sharedKey !== undefined
+    );
   }
 
-  private _connect() {
+  private async _postMessage<T extends Command, R = any>(
+    cmd: T,
+    body: object = {},
+    delay = 1000,
+  ) {
+    if (this.port === undefined)
+      throw new Error("Invalid session state: connection closed");
+    if (this.lock) throw new Error("Invalid session state: locked");
+    this.lock = true;
+
+    try {
+      const response = new Promise<R | undefined>((resolve, reject) => {
+        let timeout: NodeJS.Timeout | undefined;
+
+        const cleanup = () => {
+          if (timeout !== undefined) {
+            clearTimeout(timeout);
+            timeout = undefined;
+          }
+
+          this.events.removeEventListener("message", onMessage);
+          this.events.removeEventListener("error", onError);
+        };
+
+        const onMessage = (event: Event) => {
+          const message = (event as CustomEvent).detail ?? event;
+          if (message.cmd !== cmd) return;
+          cleanup();
+          return resolve(message);
+        };
+
+        const onError = (event: Event) => {
+          const error = (event as CustomEvent).detail ?? event;
+          cleanup();
+          return reject(error);
+        };
+
+        this.events.addEventListener("message", onMessage);
+        this.events.addEventListener("error", onError);
+
+        timeout = setTimeout(() => {
+          timeout = undefined;
+          cleanup();
+          resolve(undefined);
+        }, delay);
+      });
+
+      this.port.postMessage({
+        cmd,
+        ...body,
+      });
+
+      return await response;
+    } finally {
+      this.lock = false;
+    }
+  }
+
+  async connect() {
     if (this.port === undefined) {
       this.port = browser.runtime.connectNative("com.apple.passwordmanager");
 
-      this.port.onDisconnect.addListener((port) => {
+      this.port?.onMessage.addListener((message, port) => {
         if (this.port !== port) return;
 
-        const message =
-          port.error?.message ?? browser.runtime.lastError?.message;
+        this.events.dispatchEvent(
+          new CustomEvent("message", {
+            cancelable: false,
+            detail: message,
+          }),
+        );
+      });
 
-        let error;
-        switch (message) {
-          case "No such native application com.apple.passwordmanager":
-          case "Specified native messaging host not found.":
-            error = "MISSING_CONNECT_NATIVE_HOST";
-            break;
-
-          case "Access to the specified native messaging host is forbidden.":
-            error = "MISSING_CONNECT_NATIVE_PERMISSION";
-            break;
-
-          default:
-            error = message;
-            break;
-        }
+      this.port?.onDisconnect.addListener((port) => {
+        if (this.port !== port) return;
 
         this.events.dispatchEvent(
           new CustomEvent("error", {
             cancelable: false,
-            detail: error,
+            detail: port.error ?? browser.runtime.lastError,
           }),
         );
 
-        this.port = undefined;
+        delete this.port;
       });
+
+      delete this.session;
     }
 
-    return this.port;
-  }
+    if (this.session === undefined) {
+      const { capabilities } = await this._postMessage(
+        Command.GET_CAPABILITIES,
+      );
 
-  private async _readResponse<T extends Command>(cmd: T) {
-    return await new Promise((resolve, reject) => {
-      let port: browser.Runtime.Port;
+      if (capabilities.shouldUseBase64 !== true)
+        throw new Error("Unsupported capabilities: should use base64");
 
-      const callback = async (response: object) => {
-        if (!("cmd" in response) || response.cmd !== cmd) return;
+      if (
+        capabilities.secretSessionVersion !== undefined &&
+        capabilities.secretSessionVersion !==
+          SecretSessionVersion.SRP_WITH_RFC_VERIFICATION
+      ) {
+        throw new Error(
+          "Unsupported capabilities: should use RFC verification",
+        );
+      }
 
-        try {
-          if ("payload" in response) {
-            const payload = response.payload;
-
-            if (typeof payload === "object" && payload !== null) {
-              response = payload;
-            } else if (typeof payload === "string") {
-              // Do nothing
-            } else {
-              throw `UNKNOWN_RESPONSE_PAYLOAD:${response}`;
-            }
-          }
-
-          if ("SMSG" in response) {
-            let smsg = response.SMSG;
-
-            if (typeof smsg === "string") {
-              try {
-                smsg = JSON.parse(smsg);
-              } catch (e) {
-                throw `INVALID_SMSG:${smsg}`;
-              }
-            }
-
-            if (typeof smsg !== "object" || smsg === null)
-              throw `UNKNOWN_RESPONSE_SMSG:${response}`;
-
-            if (!("SDATA" in smsg) || typeof smsg.SDATA !== "string")
-              throw "MISSING_SMSG_SDATA";
-            if (!("TID" in smsg) || typeof smsg.TID !== "string")
-              throw "MISSING_SMSG_TID";
-
-            const capabilities = await this.getCapabilities();
-            const tid = sjcl.bn.fromBits(
-              utils.stringToBits(smsg.TID, capabilities.shouldUseBase64),
-            );
-            if (!tid.equals(this.tid)) throw "INVALID_SMSG_TID";
-
-            response = JSON.parse(
-              sjcl.codec.utf8String.fromBits(
-                utils.decrypt(
-                  utils.stringToBits(smsg.SDATA, capabilities.shouldUseBase64),
-                  this.encKey,
-                ),
-              ),
-            );
-          }
-
-          return resolve(response);
-        } catch (e) {
-          return reject(e);
-        } finally {
-          this.events.removeEventListener("error", callback);
-          port.onMessage.removeListener(callback);
-        }
-      };
-
-      const onError = (event: Event) => {
-        this.events.removeEventListener("error", callback);
-        port.onMessage.removeListener(callback);
-        return reject((event as CustomEvent).detail ?? event);
-      };
-
-      this.events.addEventListener("error", onError);
-      port = this._connect();
-      port.onMessage.addListener(callback);
-    });
-  }
-
-  private async _postMessage<T extends Command>(
-    cmd: T,
-    body: object = {},
-    expectResponse = true,
-  ): Promise<any> {
-    let response;
-
-    if (expectResponse) {
-      response = this._readResponse(cmd);
-    } else {
-      response = new Promise<void>((resolve, reject) => {
-        let timeout: NodeJS.Timeout;
-
-        const onError = (event: Event) => {
-          this.events.removeEventListener("error", onError);
-          clearTimeout(timeout);
-          return reject((event as CustomEvent).detail ?? event);
-        };
-
-        timeout = setTimeout(() => {
-          this.events.removeEventListener("error", onError);
-          resolve();
-        }, 200);
-
-        this.events.addEventListener("error", onError);
-      });
+      this.session = await SRPSession.new();
     }
-
-    this._connect().postMessage({
-      cmd,
-      ...body,
-    });
-
-    return await response;
   }
 
-  get ready() {
-    return (
-      this.capabilities !== undefined &&
-      this.verifier !== undefined &&
-      this.encKey !== undefined
-    );
-  }
+  async requestChallenge() {
+    if (this.session === undefined)
+      throw new Error("Invalid session state: not initialized");
 
-  async getCapabilities(refresh = false) {
-    if (this.capabilities === undefined || refresh) {
-      const { capabilities } = (await this._postMessage(Command.Hello)) ?? {};
+    delete this.session.serverPublicKey;
+    delete this.session.salt;
+    delete this.session.sharedKey;
 
-      this.capabilities = {
-        shouldUseBase64: capabilities.shouldUseBase64 ?? false,
-        secretSessionVersion:
-          capabilities.secretSessionVersion ??
-          SecretSessionVersion.SRPWithOldVerification,
-        canFillOneTimeCodes: capabilities.canFillOneTimeCodes ?? false,
-        operatingSystem: capabilities.operatingSystem ?? {},
-        supportsSubURLs: capabilities.supportsSubURLs ?? false,
-        scanForOTPURI: capabilities.scanForOTPURI ?? false,
-      };
-    }
-
-    return this.capabilities;
-  }
-
-  async sendActiveTab(tabId: number, active: boolean) {
-    await this._postMessage(
-      Command.TabEvent,
-      {
-        tabId,
-        event: active ? 1 : 0,
-      },
-      false,
-    );
-  }
-
-  async requestChallengePIN() {
-    const capabilities = await this.getCapabilities();
-
-    const response = await this._postMessage(Command.ChallengePIN, {
+    const { payload } = await this._postMessage(Command.HANDSHAKE, {
       msg: {
         QID: "m0",
-        PAKE: utils.stringToBase64(
-          JSON.stringify({
-            TID: utils.bitsToString(
-              this.tid.toBits(),
-              true,
-              capabilities.shouldUseBase64,
-            ),
-            MSG: 0,
-            A: utils.bitsToString(
-              GRP.g.powermod(this.a, GRP.N).toBits(),
-              true,
-              capabilities.shouldUseBase64,
-            ),
-            VER: "1.0",
-            PROTO: [
-              SecretSessionVersion.SRPWithOldVerification,
-              SecretSessionVersion.SRPWithRFCVerification,
-            ],
-          }),
-        ),
+        PAKE: toBase64({
+          TID: this.session.username,
+          MSG: MSGTypes.CLIENT_KEY_EXCHANGE,
+          A: toBase64(this.session.clientPublicKey),
+          VER: VERSION,
+          PROTO: [SecretSessionVersion.SRP_WITH_RFC_VERIFICATION],
+        }),
         HSTBRSR: BROWSER_NAME,
       },
     });
 
     let pake;
     try {
-      pake = JSON.parse(
-        sjcl.codec.utf8String.fromBits(sjcl.codec.base64.toBits(response.PAKE)),
-      );
+      pake = JSON.parse(Buffer.from(payload.PAKE, "base64").toString("utf8"));
     } catch (e) {
-      throw `INVALID_PAKE:${response.PAKE}`;
+      throw new Error("Invalid server hello: missing payload");
     }
 
-    if (
-      !this.tid.equals(
-        sjcl.bn.fromBits(
-          utils.stringToBits(pake.TID, capabilities.shouldUseBase64),
-        ),
-      )
-    ) {
-      throw "INVALID_PAKE_TID";
-    }
+    if (pake.TID !== this.session.username)
+      throw new Error("Invalid server hello: destined to another session");
 
-    if (!pake.MSG) throw "MISSING_PAKE_MSG";
+    if (pake.MSG !== MSGTypes.SERVER_KEY_EXCHANGE)
+      throw new Error("Invalid server hello: unexpected message");
 
-    if (parseInt(pake.MSG, 10) !== MSGTypes.MSG1)
-      throw `MESSAGE_MISMATCH:${pake.MSG}`;
+    if (pake.PROTO !== SecretSessionVersion.SRP_WITH_RFC_VERIFICATION)
+      throw new Error("Invalid server hello: unsupported protocol");
 
-    if (
-      typeof pake.PROTO === "number" &&
-      Object.values(SecretSessionVersion).includes(pake.PROTO)
-    ) {
-      capabilities.secretSessionVersion = pake.PROTO;
-      this.capabilities = capabilities;
-    }
+    if ("VER" in pake && pake.VER !== VERSION)
+      throw new Error("Invalid server hello: unsupported version");
 
-    if (typeof pake.s !== "string") throw "MISSING_PAKE_S";
-    if (typeof pake.B !== "string") throw "MISSING_PAKE_B";
-
-    // if (pake.VER) const appVer = pake.VER;
-
-    const b = sjcl.bn.fromBits(
-      utils.stringToBits(pake.B, capabilities.shouldUseBase64),
-    );
-
-    if (b.mod(GRP.N).equals(0)) throw "PAKE_MULMOD_ERROR";
-
-    return {
-      s: pake.s as string,
-      B: pake.B as string,
-    };
+    const serverPublicKey = readBigInt(Buffer.from(pake.B, "base64"));
+    const salt = readBigInt(Buffer.from(pake.s, "base64"));
+    this.session.setServerPublicKey(serverPublicKey, salt);
   }
 
-  async setChallengePIN(pake: { s: string; B: string }, pin: string) {
-    const capabilities = await this.getCapabilities();
+  async verifyChallenge(password: string) {
+    if (this.session === undefined)
+      throw new Error("Invalid session state: not initialized");
 
-    const x = utils.calculateX(
-      pake,
-      this.tid,
-      pin,
-      capabilities.shouldUseBase64,
-    );
+    await this.session.setSharedKey(password);
 
-    const verifier = GRP.g.powermod(x, GRP.N);
-
-    const sessionKey = utils.createSessionKey(
-      pake,
-      this.a,
-      x,
-      capabilities.shouldUseBase64,
-    );
-
-    const encKey = sjcl.bitArray.bitSlice(sessionKey, 0, KEY_LEN);
-
-    const msg: Record<string, string> = {};
-    let hamk;
-    switch (capabilities.secretSessionVersion) {
-      case SecretSessionVersion.SRPWithRFCVerification:
-        let m;
-        [m, hamk] = utils.calculateM(
-          pake,
-          sessionKey,
-          utils.bitsToString(
-            this.tid.toBits(),
-            true,
-            capabilities.shouldUseBase64,
-          ),
-          this.a,
-          capabilities.shouldUseBase64,
-        );
-
-        msg.M = utils.bitsToString(m, false, capabilities.shouldUseBase64);
-        break;
-
-      case SecretSessionVersion.SRPWithOldVerification:
-        msg.v = utils.bitsToString(
-          utils.encrypt(
-            capabilities.shouldUseBase64
-              ? verifier.toBits()
-              : sjcl.codec.utf8String.toBits(verifier.toString()),
-            encKey,
-          ),
-          false,
-          capabilities.shouldUseBase64,
-        );
-        break;
-
-      default:
-        throw `UNKNOWN_PROTOCOL_VERSION:${capabilities.secretSessionVersion}`;
-    }
-
-    const response = await this._postMessage(Command.ChallengePIN, {
+    const { payload } = await this._postMessage(Command.HANDSHAKE, {
       msg: {
         QID: "m2",
-        PAKE: utils.stringToBase64(
-          JSON.stringify({
-            TID: utils.bitsToString(
-              this.tid.toBits(),
-              true,
-              capabilities.shouldUseBase64,
-            ),
-            MSG: 2,
-            ...msg,
-          }),
-        ),
+        PAKE: toBase64({
+          TID: this.session.username,
+          MSG: MSGTypes.CLIENT_VERIFICATION,
+          M: toBase64(await this.session.computeM()),
+        }),
       },
     });
 
-    let pake2;
+    let pake;
     try {
-      pake2 = JSON.parse(
-        sjcl.codec.utf8String.fromBits(sjcl.codec.base64.toBits(response.PAKE)),
-      );
+      pake = JSON.parse(Buffer.from(payload.PAKE, "base64").toString("utf8"));
     } catch (e) {
-      throw `INVALID_PAKE:${response.PAKE}`;
+      throw new Error("Invalid server verification: missing payload");
     }
 
-    if (
-      !this.tid.equals(
-        sjcl.bn.fromBits(
-          utils.stringToBits(pake2.TID, capabilities.shouldUseBase64),
-        ),
-      )
-    ) {
-      throw "INVALID_PAKE_TID";
+    if (pake.TID !== this.session.username) {
+      throw new Error(
+        "Invalid server verification: destined to another session",
+      );
     }
 
-    if (!pake2.MSG) throw "MISSING_PAKE_MSG";
+    if (pake.MSG !== MSGTypes.SERVER_VERIFICATION)
+      throw new Error("Invalid server verification: unexpected message");
 
-    if (parseInt(pake2.MSG, 10) !== MSGTypes.MSG3)
-      throw `MESSAGE_MISMATCH:${pake2.MSG}`;
-
-    if (pake2.ErrCode !== 0) {
-      switch (pake2.ErrCode) {
+    if (pake.ErrCode !== 0) {
+      switch (pake.ErrCode) {
         case 1:
-          throw "INVALID_PIN";
+          throw new Error("Incorrect challenge PIN");
 
         default:
-          throw `UNKNOWN_PAKE_ERROR:${pake2.ErrCode}`;
+          throw new Error(
+            `Invalid server verification: error code ${pake.ErrCode}`,
+          );
       }
     }
 
-    switch (capabilities.secretSessionVersion) {
-      case SecretSessionVersion.SRPWithRFCVerification:
-        if (!pake2.HAMK) {
-          throw "MISSING_HAMK";
-        }
+    // TODO: Verify HAMK
+    console.log("HAMK", pake.HAMK);
+  }
 
-        const a = utils.stringToBits(pake2.HAMK, capabilities.shouldUseBase64);
-        if (!sjcl.bitArray.equal(a, hamk!)) throw `INVALID_HAMK:${pake2.HAMK}`;
-        break;
-
-      case SecretSessionVersion.SRPWithOldVerification:
-        break;
-
-      default:
-        throw `UNKNOWN_PROTOCOL_VERSION:${capabilities.secretSessionVersion}`;
-    }
-
-    this.verifier = verifier;
-    this.encKey = encKey;
+  async sendActiveTab(tabId: number, active: boolean) {
+    await this._postMessage(Command.TAB_EVENT, {
+      tabId,
+      event: active ? 1 : 0,
+    });
   }
 
   async getLoginNamesForURL(tabId: number, url: string) {
-    const capabilities = await this.getCapabilities();
+    if (this.session === undefined)
+      throw new Error("Invalid session state: not initialized");
 
     const { hostname } = new URL(url);
 
-    const sdata = utils.encrypt(
-      sjcl.codec.utf8String.toBits(
-        JSON.stringify({
-          ACT: Action.GhostSearch,
-          URL: hostname,
-        }),
-      ),
-      this.encKey,
+    const sdata = toBase64(
+      await this.session.encrypt({
+        ACT: Action.GHOST_SEARCH,
+        URL: hostname,
+      }),
     );
 
-    const response = await this._postMessage(Command.GetLoginNames4URL, {
-      tabId,
-      frameId: 0,
-      url: hostname,
-      payload: {
-        QID: "CmdGetLoginNames4URL",
-        SMSG: {
-          TID: utils.bitsToString(
-            this.tid.toBits(),
-            true,
-            capabilities.shouldUseBase64,
-          ),
-          SDATA: utils.bitsToString(sdata, true, capabilities.shouldUseBase64),
+    const { payload } = await this._postMessage(
+      Command.GET_LOGIN_NAMES_FOR_URL,
+      {
+        tabId,
+        frameId: 0,
+        url: hostname,
+        payload: {
+          QID: "CmdGetLoginNames4URL",
+          SMSG: {
+            TID: this.session.username,
+            SDATA: sdata,
+          },
         },
       },
-    });
+    );
+
+    if (payload.SMSG.TID !== this.session.username)
+      throw new Error("Invalid server response: destined to another session");
+
+    let response;
+    try {
+      const data = await this.session.decrypt(
+        Buffer.from(payload.SMSG.SDATA, "base64"),
+      );
+      response = JSON.parse(data.toString("utf8"));
+    } catch (e) {
+      console.error(e);
+      throw new Error("Invalid server response: missing payload");
+    }
 
     switch (response.STATUS) {
-      case QueryStatus.Success:
+      case QueryStatus.SUCCESS:
         return (response.Entries as any[]).map(({ USR, sites }) => ({
           username: USR,
           sites,
         }));
 
-      case QueryStatus.GenericError:
-        throw "QUERY_GENERIC_ERROR";
-
-      case QueryStatus.InvalidParam:
-        throw "QUERY_INVALID_PARAM";
-
-      case QueryStatus.NoResults:
+      case QueryStatus.NO_RESULTS:
         return [];
 
-      case QueryStatus.FailedToDelete:
-        throw "QUERY_FAILED_TO_DELETE";
-
-      case QueryStatus.FailedToUpdate:
-        throw "QUERY_FAILED_TO_UPDATE";
-
-      case QueryStatus.InvalidMessageFormat:
-        throw "QUERY_INVALID_MESSAGE_FORMAT";
-
-      case QueryStatus.DuplicateItem:
-        throw "QUERY_DUPLICATE_ITEM";
-
-      case QueryStatus.UnknownAction:
-        throw "QUERY_UNKNOWN_ACTION";
-
-      case QueryStatus.InvalidSession:
-        throw "QUERY_INVALID_SESSION";
-
       default:
-        throw `UNKNOWN_QUERY_STATUS:${response.STATUS}`;
+        throwQueryStatusError(response.STATUS);
     }
   }
 
@@ -514,75 +307,59 @@ export class ApplePasswordManager {
     url: string,
     loginName: { username: string; sites: string[] },
   ) {
-    const capabilities = await this.getCapabilities();
+    if (this.session === undefined)
+      throw new Error("Invalid session state: not initialized");
 
     const { hostname } = new URL(url);
 
-    const sdata = utils.encrypt(
-      sjcl.codec.utf8String.toBits(
-        JSON.stringify({
-          ACT: Action.Search,
-          URL: hostname,
-          USR: loginName.username,
-        }),
-      ),
-      this.encKey,
+    const sdata = toBase64(
+      await this.session.encrypt({
+        ACT: Action.SEARCH,
+        URL: hostname,
+        USR: loginName.username,
+      }),
     );
 
-    const response = await this._postMessage(Command.GetPassword4LoginName, {
-      tabId,
-      frameId: 0,
-      url: loginName.sites?.[0] ?? hostname,
-      payload: {
-        QID: "CmdGetPassword4LoginName",
-        SMSG: {
-          TID: utils.bitsToString(
-            this.tid.toBits(),
-            true,
-            capabilities.shouldUseBase64,
-          ),
-          SDATA: utils.bitsToString(sdata, true, capabilities.shouldUseBase64),
+    const { payload } = await this._postMessage(
+      Command.GET_PASSWORD_FOR_LOGIN_NAME,
+      {
+        tabId,
+        frameId: 0,
+        url: loginName.sites?.[0] ?? hostname,
+        payload: {
+          QID: "CmdGetPassword4LoginName",
+          SMSG: {
+            TID: this.session.username,
+            SDATA: sdata,
+          },
         },
       },
-    });
+      60 * 1000,
+    );
+
+    if (payload.SMSG.TID !== this.session.username)
+      throw new Error("Invalid server response: destined to another session");
+
+    let response;
+    try {
+      const data = await this.session.decrypt(
+        Buffer.from(payload.SMSG.SDATA, "base64"),
+      );
+      response = JSON.parse(data.toString("utf8"));
+    } catch (e) {
+      throw new Error("Invalid server response: missing payload");
+    }
 
     switch (response.STATUS) {
-      case QueryStatus.Success:
+      case QueryStatus.SUCCESS:
         return (response.Entries as any[]).map(({ USR, PWD, sites }) => ({
           username: USR,
           password: PWD,
           sites,
         }))[0];
 
-      case QueryStatus.GenericError:
-        throw "QUERY_GENERIC_ERROR";
-
-      case QueryStatus.InvalidParam:
-        throw "QUERY_INVALID_PARAM";
-
-      case QueryStatus.NoResults:
-        throw "QUERY_NO_RESULTS";
-
-      case QueryStatus.FailedToDelete:
-        throw "QUERY_FAILED_TO_DELETE";
-
-      case QueryStatus.FailedToUpdate:
-        throw "QUERY_FAILED_TO_UPDATE";
-
-      case QueryStatus.InvalidMessageFormat:
-        throw "QUERY_INVALID_MESSAGE_FORMAT";
-
-      case QueryStatus.DuplicateItem:
-        throw "QUERY_DUPLICATE_ITEM";
-
-      case QueryStatus.UnknownAction:
-        throw "QUERY_UNKNOWN_ACTION";
-
-      case QueryStatus.InvalidSession:
-        throw "QUERY_INVALID_SESSION";
-
       default:
-        throw `UNKNOWN_QUERY_STATUS:${response.STATUS}`;
+        throwQueryStatusError(response.STATUS);
     }
   }
 
@@ -590,7 +367,7 @@ export class ApplePasswordManager {
     const port = this.port;
     if (port === undefined) return;
 
-    this._postMessage(Command.EndOp);
+    this._postMessage(Command.END);
 
     await new Promise<void>((resolve) => {
       port.onDisconnect.addListener(() => resolve());

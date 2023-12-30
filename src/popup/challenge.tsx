@@ -9,55 +9,57 @@ interface Props {
 }
 
 export function ChallengeView({ setReady }: Props) {
-  const [pake, setPAKE] = useState<object>();
+  const [requested, setRequested] = useState(false);
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string>();
 
-  const requestChallengePin = async () => {
+  const requestChallenge = async () => {
+    setRequested(false);
+
     try {
-      const { success, pake, error } = await browser.runtime.sendMessage({
-        cmd: "REQUEST_CHALLENGE_PIN",
+      const { success, error } = await browser.runtime.sendMessage({
+        cmd: "REQUEST_CHALLENGE",
       });
 
       if (error !== undefined || !success) throw error;
 
-      setPAKE(pake);
+      setRequested(true);
     } catch (e: any) {
-      setError(e);
-      setPAKE(undefined);
+      setError(e.message ?? e.toString());
     }
   };
 
-  const setChallengePin = async (pin: string, pake: object) => {
-    // Setting the challenge PIN freezes the UI, so we delay it by 1 render frame for the input to have time to update one more time
-    setTimeout(async () => {
-      try {
-        const { success, error } = await browser.runtime.sendMessage({
-          cmd: "SET_CHALLENGE_PIN",
-          pake,
-          pin,
-        });
+  const verifyChallenge = async (pin: string) => {
+    setError(undefined);
 
-        if (error !== undefined || !success) throw error;
+    try {
+      const { success, error } = await browser.runtime.sendMessage({
+        cmd: "VERIFY_CHALLENGE",
+        pin,
+      });
 
-        setReady();
-      } catch (e: any) {
-        setError(e);
-        await requestChallengePin();
-        setPin("");
-      }
-    }, 0);
+      if (error !== undefined || !success) throw error;
+
+      setReady();
+    } catch (e: any) {
+      setError(e.message ?? e.toString());
+      await requestChallenge();
+      setPin("");
+    }
   };
 
   useEffect(() => {
-    requestChallengePin();
+    requestChallenge();
   }, []);
 
   useEffect(() => {
-    if (pake === undefined || pin.length !== 6) return;
+    if (!requested || pin.length !== 6) return;
 
-    setChallengePin(pin, pake);
-  }, [pake, pin]);
+    // Verifying the challenge PIN freezes the UI, so we delay it by 1 render frame for the input to have time to update one more time
+    setTimeout(async () => {
+      verifyChallenge(pin);
+    }, 0);
+  }, [requested, pin]);
 
   const handleChangePin = (pin: string) => {
     setError(undefined);
@@ -65,12 +67,11 @@ export function ChallengeView({ setReady }: Props) {
     pin = pin.replace(/\D/g, "");
     if (pin.length > 6) return;
     setPin(pin);
-    setError(undefined);
   };
 
-  if (error !== undefined && error !== "INVALID_PIN")
+  if (error !== undefined && error !== "Incorrect challenge PIN")
     return <ErrorView error={error} />;
-  if (pake === undefined) return <LoadingView action="REQUEST_CHALLENGE_PIN" />;
+  if (!requested) return <LoadingView action="REQUEST_CHALLENGE" />;
 
   return (
     <div className={styles.challenge}>
@@ -97,7 +98,7 @@ export function ChallengeView({ setReady }: Props) {
           onChange={(e) => handleChangePin(e.target.value)}
           autoFocus
           disabled={pin.length === 6}
-          className={error === "INVALID_PIN" ? styles.invalid : undefined}
+          className={error !== undefined ? styles.invalid : undefined}
         />
       </div>
     </div>

@@ -12,6 +12,8 @@ export function PopupView() {
   const [error, setError] = useState<string>();
 
   const checkReady = async () => {
+    setError(undefined);
+
     try {
       const { success, ready, error } = await browser.runtime.sendMessage({
         cmd: "IS_READY",
@@ -21,7 +23,7 @@ export function PopupView() {
 
       setReady(ready);
     } catch (e: any) {
-      setError(e);
+      setError(e.message ?? e.toString());
     }
   };
 
