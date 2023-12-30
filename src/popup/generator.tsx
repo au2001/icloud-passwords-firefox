@@ -25,7 +25,8 @@ export function GeneratorView() {
 
     const getRandomNumber = (n: number) => {
       const RAND_MAX = Math.pow(2, 32);
-      if (n <= 0 || n > RAND_MAX) throw `RANDOM_OUT_OF_RANGE:${n}`;
+      if (n <= 0 || n > RAND_MAX)
+        throw new Error(`Random number out of range: ${n}`);
 
       const array = new Uint32Array(1);
       do {
@@ -93,11 +94,13 @@ export function GeneratorView() {
   }, [handleSelect]);
 
   const handleCopy = async () => {
+    setError(undefined);
+
     try {
       await navigator.clipboard.writeText(password);
       setCopied(false);
     } catch (e: any) {
-      setError(e);
+      setError(e.message ?? e.toString());
     }
   };
 

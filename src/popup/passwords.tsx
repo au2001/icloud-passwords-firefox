@@ -34,7 +34,7 @@ export function PasswordsView() {
 
       setLoginNames(loginNames);
     } catch (e: any) {
-      setError(e);
+      setError(e.message ?? e.toString());
     }
   };
 
@@ -56,7 +56,7 @@ export function PasswordsView() {
     try {
       // Can't use GET_PASSWORD_FOR_LOGIN_NAME here
       // See https://bugzilla.mozilla.org/show_bug.cgi?id=1292701
-      const { success, warnings, error } = await browser.runtime.sendMessage({
+      const { success, error } = await browser.runtime.sendMessage({
         cmd: `${action}_PASSWORD`,
         tabId: tab.id,
         url: tab.url,
@@ -64,10 +64,8 @@ export function PasswordsView() {
       });
 
       if (error !== undefined || !success) throw error;
-
-      (warnings as string[]).forEach((warning) => console.warn(warning));
     } catch (e: any) {
-      setError(e);
+      setError(e.message ?? e.toString());
     }
   };
 
@@ -85,7 +83,7 @@ export function PasswordsView() {
       // Next time the user opens the extension, they will see the challenge view automatically
       window.close();
     } catch (e: any) {
-      setError(e);
+      setError(e.message ?? e.toString());
     }
   };
 
@@ -93,7 +91,7 @@ export function PasswordsView() {
   if (tab?.id === undefined || tab?.url === undefined)
     return <LoadingView action="CURRENT_TAB" />;
   if (new URL(tab.url).hostname === "")
-    return <ErrorView error={`URL_NOT_COMPATIBLE:${tab.url}`} />;
+    return <ErrorView error={`URL is not compatible: ${tab.url}`} />;
   if (loginNames === undefined)
     return <LoadingView action="GET_LOGIN_NAMES_FOR_URL" />;
 

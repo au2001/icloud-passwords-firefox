@@ -5,10 +5,8 @@ import { autoFillPassword } from "./auto-fill";
 let api: ApplePasswordManager | null = null;
 const getAPI = () => (api ??= new ApplePasswordManager());
 
-browser.runtime.onMessage.addListener(async (message, sender) => {
+browser.runtime.onMessage.addListener(async (message) => {
   try {
-    sender; // TODO: Only allow valid sender
-
     switch (message.cmd) {
       case "IS_READY":
         return {
@@ -27,14 +25,15 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
           locked: true,
         };
 
-      case "REQUEST_CHALLENGE_PIN":
+      case "REQUEST_CHALLENGE":
+        await getAPI().connect();
+        await getAPI().requestChallenge();
         return {
           success: true,
-          pake: await getAPI().requestChallengePIN(),
         };
 
-      case "SET_CHALLENGE_PIN":
-        await getAPI().setChallengePIN(message.pake, message.pin);
+      case "VERIFY_CHALLENGE":
+        await getAPI().verifyChallenge(message.pin);
         return {
           success: true,
         };
@@ -66,9 +65,12 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
         );
 
         const tab = await browser.tabs.get(message.tabId);
-        if (tab.id === undefined) throw "AUTO_FILL_TAB_NOT_FOUND";
-        if (!tab.active) throw "AUTO_FILL_TAB_INACTIVE";
-        if (tab.url !== message.url) throw "AUTO_FILL_TAB_REDIRECTED";
+        if (tab.id === undefined)
+          throw new Error("AutoFill failed: tab no longer exists");
+        if (!tab.active)
+          throw new Error("AutoFill failed: tab is no longer active");
+        if (tab.url !== message.url)
+          throw new Error("AutoFill failed: tab has changed URL");
 
         const [{ result, error }] = await browser.scripting.executeScript({
           target: {
@@ -81,24 +83,7 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
         if (error !== undefined) throw error;
 
         const { success, warnings } = result;
-        (warnings as string[]).forEach((warning) => {
-          switch (warning) {
-            case "MULTIPLE_PASSWORD_FIELDS":
-              console.warn(
-                `Multiple password input fields found on ${window.location}`,
-              );
-              break;
-
-            case "NO_USERNAME_FIELD":
-              console.warn(
-                `No username input field found on ${window.location}`,
-              );
-              break;
-
-            default:
-              console.warn(warning);
-          }
-        });
+        (warnings as string[]).forEach((warning) => console.warn(warning));
 
         return {
           success,

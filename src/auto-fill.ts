@@ -14,9 +14,11 @@ export function autoFillPassword(username: string, password: string) {
   }
 
   if (passwordInputs.length === 0) {
-    throw "AUTO_FILL_NO_PASSWORD_FIELD";
+    throw new Error("AutoFill failed: no password field on page");
   } else if (passwordInputs.length > 1) {
-    warnings.push("AUTO_FILL_MULTIPLE_PASSWORD_FIELDS");
+    warnings.push(
+      "Multiple passwords detected on page, only filling the first",
+    );
   }
 
   const passwordInput = passwordInputs[0];
@@ -60,7 +62,7 @@ export function autoFillPassword(username: string, password: string) {
 
     while (usernameInput.previousElementSibling === null) {
       if (usernameInput.parentElement === null) {
-        warnings.push("AUTO_FILL_NO_USERNAME_FIELD");
+        warnings.push("No username field found on page");
         usernameInput = null;
         break outer;
       }
