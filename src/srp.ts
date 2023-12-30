@@ -49,7 +49,9 @@ export class SRPSession {
 
   static async new() {
     const username = toBase64(randomBytes(16));
-    const clientPrivateKey = readBigInt(randomBytes(32)); // TODO: crypto.subtle.generateKey
+
+    // TODO: Use crypto.subtle.generateKey
+    const clientPrivateKey = readBigInt(randomBytes(32));
 
     return new SRPSession(username, clientPrivateKey);
   }
@@ -57,17 +59,6 @@ export class SRPSession {
   // A
   get clientPublicKey() {
     return powermod(GROUP_GENERATOR, this.clientPrivateKey, GROUP_PRIME);
-  }
-
-  async getEncryptionKey() {
-    if (this.sharedKey === undefined) return undefined;
-
-    const key = toBuffer(this.sharedKey).subarray(0, 16);
-
-    return await crypto.subtle.importKey("raw", key, "AES-GCM", true, [
-      "encrypt",
-      "decrypt",
-    ]);
   }
 
   setServerPublicKey(serverPublicKey: bigint, salt: bigint) {
@@ -144,6 +135,30 @@ export class SRPSession {
         toBuffer(this.sharedKey),
       ]),
     );
+  }
+
+  async computeHMAC(data: Buffer) {
+    if (this.sharedKey === undefined)
+      throw new Error("Invalid session state: missing shared key");
+
+    return await sha256(
+      Buffer.concat([
+        toBuffer(this.clientPublicKey),
+        data,
+        toBuffer(this.sharedKey),
+      ]),
+    );
+  }
+
+  async getEncryptionKey() {
+    if (this.sharedKey === undefined) return undefined;
+
+    const key = toBuffer(this.sharedKey).subarray(0, 16);
+
+    return await crypto.subtle.importKey("raw", key, "AES-GCM", true, [
+      "encrypt",
+      "decrypt",
+    ]);
   }
 
   async encrypt(data: any) {
