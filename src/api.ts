@@ -8,7 +8,7 @@ import {
   SecretSessionVersion,
 } from "./enums";
 import { SRPSession } from "./srp";
-import { readBigInt, throwQueryStatusError, toBase64, toBuffer } from "./utils";
+import { readBigInt, throwQueryStatusError, toBase64 } from "./utils";
 
 const BROWSER_NAME = "Firefox";
 const VERSION = "1.0";
@@ -45,11 +45,7 @@ export class ApplePasswordManager {
         let timeout: NodeJS.Timeout | undefined;
 
         const cleanup = () => {
-          if (timeout !== undefined) {
-            clearTimeout(timeout);
-            timeout = undefined;
-          }
-
+          clearTimeout(timeout);
           this.events.removeEventListener("message", onMessage);
           this.events.removeEventListener("error", onError);
         };
@@ -71,7 +67,6 @@ export class ApplePasswordManager {
         this.events.addEventListener("error", onError);
 
         timeout = setTimeout(() => {
-          timeout = undefined;
           cleanup();
           resolve(undefined);
         }, delay);

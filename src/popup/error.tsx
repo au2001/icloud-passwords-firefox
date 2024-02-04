@@ -63,7 +63,7 @@ export function ErrorView({ error }: Props) {
         let windowsVersion = /\(Windows\s*\w*\s*(\d+)[\._](\d+)/i.exec(
           navigator.userAgent,
         );
-        if (windowsVersion !== null && windowsVersion.length !== 3) {
+        if (windowsVersion !== null && windowsVersion.length === 3) {
           const major = parseInt(windowsVersion?.[1], 10),
             minor = parseInt(windowsVersion?.[2], 10);
 
@@ -83,6 +83,15 @@ export function ErrorView({ error }: Props) {
               can download it{" "}
               <a href={downloadUrl} target="_blank" rel="noopener noreferrer">
                 here
+              </a>
+              .<br />
+              Then, follow{" "}
+              <a
+                href="https://github.com/aurelien-garnier/icloud-passwords-firefox#README"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                these instructions
               </a>
               .
             </>
