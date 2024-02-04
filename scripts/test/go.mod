@@ -1,4 +1,4 @@
-module icloud-passwords-firefox-install
+module icloud-passwords-firefox-test
 
 go 1.21.6
 
