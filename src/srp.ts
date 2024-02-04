@@ -36,29 +36,48 @@ const GROUP_GENERATOR = 5n; // g
 
 // See https://www.rfc-editor.org/rfc/rfc2945
 export class SRPSession {
+  public readonly shouldUseBase64: boolean;
   public readonly username: string; // I
   private readonly clientPrivateKey: bigint; // a
   public serverPublicKey?: bigint; // B
   public salt?: bigint; // s
   public sharedKey?: bigint; // x
 
-  private constructor(username: string, clientPrivateKey: bigint) {
-    this.username = username;
+  private constructor(
+    username: Buffer,
+    clientPrivateKey: bigint,
+    shouldUseBase64 = false,
+  ) {
     this.clientPrivateKey = clientPrivateKey;
+    this.shouldUseBase64 = shouldUseBase64;
+
+    this.username = this.serialize(username);
   }
 
-  static async new() {
-    const username = toBase64(randomBytes(16));
+  static async new(shouldUseBase64?: boolean) {
+    const username = randomBytes(16);
 
     // TODO: Use crypto.subtle.generateKey
     const clientPrivateKey = readBigInt(randomBytes(32));
 
-    return new SRPSession(username, clientPrivateKey);
+    return new SRPSession(username, clientPrivateKey, shouldUseBase64);
   }
 
   // A
   get clientPublicKey() {
     return powermod(GROUP_GENERATOR, this.clientPrivateKey, GROUP_PRIME);
+  }
+
+  serialize(data: Buffer, prefix = true) {
+    return (
+      (!this.shouldUseBase64 && prefix ? "0x" : "") +
+      data.toString(this.shouldUseBase64 ? "base64" : "hex")
+    );
+  }
+
+  deserialize(data: string) {
+    if (!this.shouldUseBase64) data = data.replace(/^0x/, "");
+    return Buffer.from(data, this.shouldUseBase64 ? "base64" : "hex");
   }
 
   setServerPublicKey(serverPublicKey: bigint, salt: bigint) {

@@ -8,7 +8,7 @@ import {
   SecretSessionVersion,
 } from "./enums";
 import { SRPSession } from "./srp";
-import { readBigInt, throwQueryStatusError, toBase64 } from "./utils";
+import { readBigInt, throwQueryStatusError, toBase64, toBuffer } from "./utils";
 
 const BROWSER_NAME = "Firefox";
 const VERSION = "1.0";
@@ -119,9 +119,6 @@ export class ApplePasswordManager {
         Command.GET_CAPABILITIES,
       );
 
-      if (capabilities.shouldUseBase64 !== true)
-        throw new Error("Unsupported capabilities: should use base64");
-
       if (
         capabilities.secretSessionVersion !== undefined &&
         capabilities.secretSessionVersion !==
@@ -132,7 +129,7 @@ export class ApplePasswordManager {
         );
       }
 
-      this.session = await SRPSession.new();
+      this.session = await SRPSession.new(capabilities.shouldUseBase64);
     }
   }
 
@@ -150,7 +147,7 @@ export class ApplePasswordManager {
         PAKE: toBase64({
           TID: this.session.username,
           MSG: MSGTypes.CLIENT_KEY_EXCHANGE,
-          A: toBase64(this.session.clientPublicKey),
+          A: this.session.serialize(toBuffer(this.session.clientPublicKey)),
           VER: VERSION,
           PROTO: [SecretSessionVersion.SRP_WITH_RFC_VERIFICATION],
         }),
@@ -168,6 +165,14 @@ export class ApplePasswordManager {
     if (pake.TID !== this.session.username)
       throw new Error("Invalid server hello: destined to another session");
 
+    switch (pake.ErrCode) {
+      case undefined:
+        break;
+
+      default:
+        throw new Error(`Invalid server hello: error code ${pake.ErrCode}`);
+    }
+
     if (pake.MSG !== MSGTypes.SERVER_KEY_EXCHANGE)
       throw new Error("Invalid server hello: unexpected message");
 
@@ -177,8 +182,8 @@ export class ApplePasswordManager {
     if ("VER" in pake && pake.VER !== VERSION)
       throw new Error("Invalid server hello: unsupported version");
 
-    const serverPublicKey = readBigInt(Buffer.from(pake.B, "base64"));
-    const salt = readBigInt(Buffer.from(pake.s, "base64"));
+    const serverPublicKey = readBigInt(this.session.deserialize(pake.B));
+    const salt = readBigInt(this.session.deserialize(pake.s));
     this.session.setServerPublicKey(serverPublicKey, salt);
   }
 
@@ -196,7 +201,7 @@ export class ApplePasswordManager {
         PAKE: toBase64({
           TID: this.session.username,
           MSG: MSGTypes.CLIENT_VERIFICATION,
-          M: toBase64(m),
+          M: this.session.serialize(m, false),
         }),
       },
     });
@@ -217,20 +222,21 @@ export class ApplePasswordManager {
     if (pake.MSG !== MSGTypes.SERVER_VERIFICATION)
       throw new Error("Invalid server verification: unexpected message");
 
-    if (pake.ErrCode !== 0) {
-      switch (pake.ErrCode) {
-        case 1:
-          throw new Error("Incorrect challenge PIN");
+    switch (pake.ErrCode) {
+      case 0:
+        break;
 
-        default:
-          throw new Error(
-            `Invalid server verification: error code ${pake.ErrCode}`,
-          );
-      }
+      case 1:
+        throw new Error("Incorrect challenge PIN");
+
+      default:
+        throw new Error(
+          `Invalid server verification: error code ${pake.ErrCode}`,
+        );
     }
 
     const hmac = await this.session.computeHMAC(m);
-    if (readBigInt(Buffer.from(pake.HAMK, "base64")) !== readBigInt(hmac))
+    if (readBigInt(this.session.deserialize(pake.HAMK)) !== readBigInt(hmac))
       throw new Error("Invalid server verification: HAMK mismatch");
   }
 
@@ -247,7 +253,7 @@ export class ApplePasswordManager {
 
     const { hostname } = new URL(url);
 
-    const sdata = toBase64(
+    const sdata = this.session.serialize(
       await this.session.encrypt({
         ACT: Action.GHOST_SEARCH,
         URL: hostname,
@@ -276,7 +282,7 @@ export class ApplePasswordManager {
     let response;
     try {
       const data = await this.session.decrypt(
-        Buffer.from(payload.SMSG.SDATA, "base64"),
+        this.session.deserialize(payload.SMSG.SDATA),
       );
       response = JSON.parse(data.toString("utf8"));
     } catch (e) {
@@ -309,7 +315,7 @@ export class ApplePasswordManager {
 
     const { hostname } = new URL(url);
 
-    const sdata = toBase64(
+    const sdata = this.session.serialize(
       await this.session.encrypt({
         ACT: Action.SEARCH,
         URL: hostname,
@@ -340,7 +346,7 @@ export class ApplePasswordManager {
     let response;
     try {
       const data = await this.session.decrypt(
-        Buffer.from(payload.SMSG.SDATA, "base64"),
+        this.session.deserialize(payload.SMSG.SDATA),
       );
       response = JSON.parse(data.toString("utf8"));
     } catch (e) {
