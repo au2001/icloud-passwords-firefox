@@ -19,6 +19,7 @@ export class ApplePasswordManager {
   private port?: Runtime.Port;
   private session?: SRPSession;
   private lock = false;
+  private challengeTimestamp = 0;
 
   get ready() {
     return (
@@ -33,7 +34,7 @@ export class ApplePasswordManager {
   private async _postMessage<T extends Command, R = any>(
     cmd: T,
     body: object = {},
-    delay = 1000,
+    delay = 5000,
   ) {
     if (this.port === undefined)
       throw new Error("Invalid session state: connection closed");
@@ -137,6 +138,11 @@ export class ApplePasswordManager {
     if (this.session === undefined)
       throw new Error("Invalid session state: not initialized");
 
+    // Allow to reopen the popup on Windows less than 5s after requesting a challenge
+    const challengeTimestamp = Date.now();
+    if (this.challengeTimestamp >= challengeTimestamp - 5 * 1000) return;
+    this.challengeTimestamp = challengeTimestamp;
+
     delete this.session.serverPublicKey;
     delete this.session.salt;
     delete this.session.sharedKey;
@@ -173,7 +179,8 @@ export class ApplePasswordManager {
         throw new Error(`Invalid server hello: error code ${pake.ErrCode}`);
     }
 
-    if (pake.MSG !== MSGTypes.SERVER_KEY_EXCHANGE)
+    // macOS sends this as a number, but iCloud for Windows as a string
+    if (pake.MSG.toString() !== MSGTypes.SERVER_KEY_EXCHANGE.toString())
       throw new Error("Invalid server hello: unexpected message");
 
     if (pake.PROTO !== SecretSessionVersion.SRP_WITH_RFC_VERIFICATION)
@@ -219,7 +226,8 @@ export class ApplePasswordManager {
       );
     }
 
-    if (pake.MSG !== MSGTypes.SERVER_VERIFICATION)
+    // macOS sends this as a number, but iCloud for Windows as a string
+    if (pake.MSG.toString() !== MSGTypes.SERVER_VERIFICATION.toString())
       throw new Error("Invalid server verification: unexpected message");
 
     switch (pake.ErrCode) {
@@ -268,13 +276,17 @@ export class ApplePasswordManager {
         url: hostname,
         payload: {
           QID: "CmdGetLoginNames4URL",
-          SMSG: {
+          SMSG: JSON.stringify({
             TID: this.session.username,
             SDATA: sdata,
-          },
+          }),
         },
       },
     );
+
+    // macOS sends this as an object, Windows as a string
+    if (typeof payload.SMSG === "string")
+      payload.SMSG = JSON.parse(payload.SMSG);
 
     if (payload.SMSG.TID !== this.session.username)
       throw new Error("Invalid server response: destined to another session");
@@ -286,7 +298,6 @@ export class ApplePasswordManager {
       );
       response = JSON.parse(data.toString("utf8"));
     } catch (e) {
-      console.error(e);
       throw new Error("Invalid server response: missing payload");
     }
 
@@ -331,14 +342,18 @@ export class ApplePasswordManager {
         url: loginName.sites?.[0] ?? hostname,
         payload: {
           QID: "CmdGetPassword4LoginName",
-          SMSG: {
+          SMSG: JSON.stringify({
             TID: this.session.username,
             SDATA: sdata,
-          },
+          }),
         },
       },
       60 * 1000,
     );
+
+    // macOS sends this as an object, Windows as a string
+    if (typeof payload.SMSG === "string")
+      payload.SMSG = JSON.parse(payload.SMSG);
 
     if (payload.SMSG.TID !== this.session.username)
       throw new Error("Invalid server response: destined to another session");

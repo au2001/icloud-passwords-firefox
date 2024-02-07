@@ -28,6 +28,16 @@ browser.runtime.onMessage.addListener(async (message) => {
       case "REQUEST_CHALLENGE":
         await getAPI().connect();
         await getAPI().requestChallenge();
+
+        try {
+          // On Windows, the PIN notification closes the extension popup
+          // https://bugzilla.mozilla.org/show_bug.cgi?id=1292701
+          // https://bugzilla.mozilla.org/show_bug.cgi?id=1378527
+          await browser.action.openPopup();
+        } catch (e) {
+          // https://bugzilla.mozilla.org/show_bug.cgi?id=1799344
+        }
+
         return {
           success: true,
         };
@@ -106,6 +116,7 @@ browser.runtime.onMessage.addListener(async (message) => {
       }
     }
   } catch (e) {
+    console.error(e);
     return {
       success: false,
       error: e,
