@@ -87,7 +87,7 @@ export function ErrorView({ error }: Props) {
               .<br />
               Then, follow{" "}
               <a
-                href="https://github.com/aurelien-garnier/icloud-passwords-firefox#README"
+                href="https://github.com/au2001/icloud-passwords-firefox#additional-setup"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -112,7 +112,7 @@ export function ErrorView({ error }: Props) {
         <>
           The setup process could not complete successfully. Follow{" "}
           <a
-            href="https://github.com/aurelien-garnier/icloud-passwords-firefox#README"
+            href="https://github.com/au2001/icloud-passwords-firefox#additional-setup"
             target="_blank"
             rel="noopener noreferrer"
           >

@@ -5,7 +5,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/aurelien-garnier/icloud-passwords-firefox.git"
+    "url": "git+ssh://git@github.com/au2001/icloud-passwords-firefox.git"
   },
   "scripts": {
     "start": "concurrently \"npm run build:watch\" \"npm run preview\"",
