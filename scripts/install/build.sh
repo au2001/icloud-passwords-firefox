@@ -17,8 +17,8 @@ build() {
 
 rm -rf ./dist
 
-build linux amd64 &
-build darwin amd64 -macos &
+# build linux amd64 &
+# build darwin amd64 -macos &
 build windows amd64 &
 
 wait
