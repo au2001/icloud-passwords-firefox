@@ -8,13 +8,14 @@ export const toBuffer = (data: any): Buffer => {
     case "number":
       return toBuffer(BigInt(data));
 
-    case "bigint":
+    case "bigint": {
       const array = [];
       while (data > 0n) {
         array.unshift(Number(data & 0xffn));
         data >>= 8n;
       }
       return Buffer.from(new Uint8Array(array));
+    }
 
     case "string":
       return Buffer.from(data, "utf8");

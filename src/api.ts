@@ -43,8 +43,6 @@ export class ApplePasswordManager {
 
     try {
       const response = new Promise<R | undefined>((resolve, reject) => {
-        let timeout: NodeJS.Timeout | undefined;
-
         const cleanup = () => {
           clearTimeout(timeout);
           this.events.removeEventListener("message", onMessage);
@@ -67,7 +65,7 @@ export class ApplePasswordManager {
         this.events.addEventListener("message", onMessage);
         this.events.addEventListener("error", onError);
 
-        timeout = setTimeout(() => {
+        const timeout = setTimeout(() => {
           cleanup();
           resolve(undefined);
         }, delay);

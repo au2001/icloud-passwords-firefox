@@ -38,19 +38,19 @@ Refer to the following table to see if your configuration is supported:
 
 ### Additional setup
 
-For operating systems other than macOS Sonoma (14) or later, additional steps are required for the extension to work:
+For some operating systems, additional steps are required for the extension to work:
 
 1. Install [iCloud for Windows](https://support.apple.com/kb/DL1455).
 2. Enable the `Passwords` option.
 3. Click on `Install Extension...` for either Microsoft Edge or Google Chrome.
-4. Download the `icloud-passwords-firefox-install.exe` file from the [latest GitHub Release](https://github.com/au2001/icloud-passwords-firefox/releases/latest).
-5. Run the downloaded executable as administrator.
+4. Download the `icloud-passwords-firefox-install` file from the [latest GitHub Release](https://github.com/au2001/icloud-passwords-firefox/releases/latest).
+5. Run the downloaded executable **as administrator**.
 6. Restart Firefox, and you should be good to go!
 
 #### Why is this required?
 
-macOS Sonoma (14) and later come with a system utility preinstalled (`PasswordManagerBrowserExtensionHelper.app`).\
-It allows Apple's iCloud Passwords extensions for Chrome and Edge to work.\
+macOS Sonoma (14) and later come with `PasswordManagerBrowserExtensionHelper.app` preinstalled.\
+It's a utility which allows Apple's iCloud Passwords Chrome and Edge extensions to work.\
 This extension uses the same utility, so it works natively without any further steps.
 
 Unfortunately, this utility is not available on previous versions of macOS, on Windows, nor on Linux.\
@@ -58,7 +58,7 @@ For such operating systems, this utility needs to be replaced. iCloud for Window
 By default, iCloud for Windows does not grant access to Firefox to access passwords.\
 The provided executable thus enables the communication between Firefox and iCloud for Windows.
 
-The source code for the Golang executable is available [in the `scripts/install` directory](https://github.com/au2001/icloud-passwords-firefox/tree/main/scripts/instal/main.go).
+The source code for the Golang executable is available [in the `scripts/install` directory](https://github.com/au2001/icloud-passwords-firefox/tree/main/scripts/install/main.go).
 
 ## Need Help?
 
@@ -89,7 +89,7 @@ The full list of planned features and known bugs is available under [Issues](htt
 
 ## Contributing
 
-Any contribution is welcome, whether that be code/Pull Requests, documentation, testing, feature ideas, or bug reporting.
+Contributions are welcome, whether that be code, documentation, testing, feature ideas, or bug reporting.
 
 🤝 If you are willing to contribute to tackle a specific GitHub Issue, please add a comment stating your intentions.\
 👾 To submit code patches, please open a [GitHub Pull Request](https://github.com/au2001/icloud-passwords-firefox/compare).\

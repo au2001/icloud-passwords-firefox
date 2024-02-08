@@ -6,7 +6,6 @@ import {
   randomBytes,
   readBigInt,
   sha256,
-  toBase64,
   toBuffer,
 } from "./utils";
 

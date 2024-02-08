@@ -90,7 +90,7 @@ export function autoFillPassword(username: string, password: string) {
     );
 
     // React >= 15.6
-    var nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
       HTMLInputElement.prototype,
       "value",
     )?.set;

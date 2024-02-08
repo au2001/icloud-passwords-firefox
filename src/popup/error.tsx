@@ -60,7 +60,7 @@ export function ErrorView({ error }: Props) {
       } else {
         let downloadUrl: string | undefined;
 
-        let windowsVersion = /\(Windows\s*\w*\s*(\d+)[\._](\d+)/i.exec(
+        const windowsVersion = /\(Windows\s*\w*\s*(\d+)[._](\d+)/i.exec(
           navigator.userAgent,
         );
         if (windowsVersion !== null && windowsVersion.length === 3) {
@@ -164,7 +164,9 @@ export function ErrorView({ error }: Props) {
       await browser.runtime.sendMessage({
         cmd: "LOCK",
       });
-    } catch (e) {}
+    } catch (e) {
+      console.error(e);
+    }
 
     window.location.reload();
   };
