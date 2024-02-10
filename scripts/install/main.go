@@ -48,7 +48,7 @@ func main() {
 			continue
 		}
 
-		manifest.Path = filepath.Join(manifestPath, manifest.Path)
+		manifest.Path = filepath.Join(filepath.Dir(manifestPath), manifest.Path)
 		manifest.AllowedOrigins = nil
 		manifest.AllowedExtensions = []string{EXTENSION_ID}
 
