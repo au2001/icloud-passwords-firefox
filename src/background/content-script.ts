@@ -5,8 +5,6 @@ import { throttle } from "../utils/timings";
 const observing = new Map<HTMLInputElement, () => void>();
 
 const observe = (input: HTMLInputElement, form: LoginForm) => {
-  form;
-
   let iframe: HTMLIFrameElement | undefined;
 
   const getSource = () =>
@@ -51,13 +49,13 @@ const observe = (input: HTMLInputElement, form: LoginForm) => {
     else onFocus();
   };
 
+  const onKeyPress = (event: KeyboardEvent) => {
+    if (event.key === "Escape") onBlur();
+  };
+
   const onBlur = () => {
     iframe?.remove();
     iframe = undefined;
-  };
-
-  const onKeyPress = (event: KeyboardEvent) => {
-    if (event.key === "Escape") onBlur();
   };
 
   if (input === document.activeElement) onFocus();
@@ -67,7 +65,11 @@ const observe = (input: HTMLInputElement, form: LoginForm) => {
   input.addEventListener("keydown", onKeyPress);
   input.addEventListener("blur", onBlur);
 
+  // Disable Firefox's native autocomplete
+  input.setAttribute("autocomplete", "off");
+
   const cleanup = () => {
+    onBlur();
     input.removeEventListener("focus", onFocus);
     input.removeEventListener("input", onInput);
     input.removeEventListener("keydown", onKeyPress);
