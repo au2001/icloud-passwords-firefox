@@ -68,22 +68,22 @@ The source code for the Golang executable is available [in the `scripts/install`
 
 ## Features
 
-| Feature                          | Status                                                             |
-| -------------------------------- | ------------------------------------------------------------------ |
-| List accounts for current URL    | ✅                                                                 |
-| Auto-fill passwords              | ✅                                                                 |
-| Copy passwords to clipboard      | ✅                                                                 |
-| Generate new passwords           | ✅                                                                 |
-| Save new accounts                | [❌](https://github.com/au2001/icloud-passwords-firefox/issues/12) |
-| Popup on login forms             | [❌](https://github.com/au2001/icloud-passwords-firefox/issues/13) |
-| Auto-fill one-time codes         | [❌](https://github.com/au2001/icloud-passwords-firefox/issues/8)  |
-| Copy one-time codes to clipboard | [❌](https://github.com/au2001/icloud-passwords-firefox/issues/8)  |
-| Register one-time codes          | [❌](https://github.com/au2001/icloud-passwords-firefox/issues/8)  |
-| Login with passkey               | [❌](https://github.com/au2001/icloud-passwords-firefox/issues/9)  |
-| Create new passkey               | [❌](https://github.com/au2001/icloud-passwords-firefox/issues/9)  |
-| Search through accounts          | [❌](https://github.com/au2001/icloud-passwords-firefox/issues/5)  |
-| Create new accounts manually     | [❌](https://github.com/au2001/icloud-passwords-firefox/issues/7)  |
-| Delete existing accounts         | ❌                                                                 |
+| Feature                            | Status                                                             |
+| ---------------------------------- | ------------------------------------------------------------------ |
+| List accounts for current website  | ✅                                                                 |
+| Select an account to auto-fill     | ✅                                                                 |
+| Copy account password to clipboard | ✅                                                                 |
+| Generate new secure passwords      | ✅                                                                 |
+| In-page auto-complete suggestions  | ✅                                                                 |
+| Search through existing accounts   | [⛅️](https://github.com/au2001/icloud-passwords-firefox/issues/5)  |
+| Auto-fill one-time codes           | [❌](https://github.com/au2001/icloud-passwords-firefox/issues/8)  |
+| Copy one-time codes to clipboard   | [❌](https://github.com/au2001/icloud-passwords-firefox/issues/8)  |
+| Register one-time codes            | [❌](https://github.com/au2001/icloud-passwords-firefox/issues/8)  |
+| Save newly created accounts        | [❌](https://github.com/au2001/icloud-passwords-firefox/issues/12) |
+| Login with a passkey               | [❌](https://github.com/au2001/icloud-passwords-firefox/issues/9)  |
+| Create new passkeys                | [❌](https://github.com/au2001/icloud-passwords-firefox/issues/9)  |
+| Create new accounts manually       | [❌](https://github.com/au2001/icloud-passwords-firefox/issues/7)  |
+| Delete existing accounts           | ❌                                                                 |
 
 The full list of planned features and known bugs is available under [Issues](https://github.com/au2001/icloud-passwords-firefox/issues).
 
