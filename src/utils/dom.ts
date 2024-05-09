@@ -119,5 +119,8 @@ export const fillLoginForm = (
 
   setNativeValue(passwordInput, password);
 
+  usernameInput?.blur();
+  passwordInput.blur();
+
   return warnings;
 };

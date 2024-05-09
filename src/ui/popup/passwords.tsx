@@ -33,6 +33,8 @@ export function PasswordsView() {
       });
 
       if (error !== undefined || !success) throw error;
+
+      window.close();
     } catch (e: any) {
       setFillError(e.message ?? e.toString());
     }

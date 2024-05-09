@@ -18,6 +18,11 @@ const observe = (input: HTMLInputElement, form: LoginForm) => {
     return `${browser.runtime.getURL("./in_page.html")}#${params.toString()}`;
   };
 
+  const destroy = () => {
+    iframe?.remove();
+    iframe = undefined;
+  };
+
   const onFocus = () => {
     if (iframe !== undefined) {
       iframe.src = getSource();
@@ -49,17 +54,25 @@ const observe = (input: HTMLInputElement, form: LoginForm) => {
   };
 
   const onInput = () => {
-    if (input === form.passwordInput && input.value !== "") onBlur();
+    if (input === form.passwordInput && input.value !== "") destroy();
     else onFocus();
   };
 
   const onKeyPress = (event: KeyboardEvent) => {
-    if (event.key === "Escape") onBlur();
+    if (event.key === "Escape") destroy();
   };
 
   const onBlur = () => {
-    iframe?.remove();
-    iframe = undefined;
+    setTimeout(() => {
+      if (
+        document.hasFocus() &&
+        (document.activeElement === input || document.activeElement === iframe)
+      ) {
+        return;
+      }
+
+      destroy();
+    });
   };
 
   const onMessage = async (message: any) => {
@@ -69,7 +82,7 @@ const observe = (input: HTMLInputElement, form: LoginForm) => {
       case "FILL_PASSWORD": {
         const { username, password } = message;
         const warnings = fillLoginForm(form, username, password);
-        onBlur();
+        destroy();
 
         return {
           success: true,
@@ -84,18 +97,22 @@ const observe = (input: HTMLInputElement, form: LoginForm) => {
   input.addEventListener("focus", onFocus);
   input.addEventListener("input", onInput);
   input.addEventListener("keydown", onKeyPress);
-  input.addEventListener("blur", onBlur);
+  window.addEventListener("focus", onBlur, true);
+  window.addEventListener("blur", onBlur, true);
+  window.addEventListener("click", onBlur, true);
   browser.runtime.onMessage.addListener(onMessage);
 
   // Disable Firefox's native autocomplete
   input.setAttribute("autocomplete", "off");
 
   const cleanup = () => {
-    onBlur();
+    destroy();
     input.removeEventListener("focus", onFocus);
     input.removeEventListener("input", onInput);
     input.removeEventListener("keydown", onKeyPress);
-    input.removeEventListener("blur", onBlur);
+    window.removeEventListener("focus", onBlur, true);
+    window.removeEventListener("blur", onBlur, true);
+    window.removeEventListener("click", onBlur, true);
     browser.runtime.onMessage.removeListener(onMessage);
   };
   observing.set(input, cleanup);
