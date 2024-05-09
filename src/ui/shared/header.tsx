@@ -16,8 +16,8 @@ export function Header({
 }: Props) {
   return (
     <header className={`${styles.header} ${sticky ? styles.sticky : ""}`}>
-      <img src="/images/PasswordsExtensionIcon_32.png" alt="" />
-      <h1>iCloud Passwords</h1>
+      <img src="/images/logo-32.png" alt="" />
+      <h1>Keychain Passwords</h1>
 
       {actionLabel !== undefined && (
         <Link

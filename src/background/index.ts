@@ -1,7 +1,8 @@
 import browser from "webextension-polyfill";
 import { ApplePasswordManager } from "../utils/api";
 
-const api = new ApplePasswordManager();
+let api: ApplePasswordManager | null = null;
+const getAPI = () => (api ??= new ApplePasswordManager());
 
 browser.runtime.onMessage.addListener(async (message) => {
   try {
@@ -9,27 +10,39 @@ browser.runtime.onMessage.addListener(async (message) => {
       case "IS_READY":
         return {
           success: true,
-          ready: api.ready,
+          ready: api?.ready ?? false,
         };
 
       case "LOCK":
-        if (!api.ready) return false;
+        if (!api?.ready) return false;
 
         await api.close();
+        api = null;
 
         return {
           success: true,
           locked: true,
         };
 
-      case "REQUEST_CHALLENGE_PIN":
+      case "REQUEST_CHALLENGE":
+        await getAPI().connect();
+        await getAPI().requestChallenge();
+
+        try {
+          // On Windows, the PIN notification closes the extension popup
+          // https://bugzilla.mozilla.org/show_bug.cgi?id=1292701
+          // https://bugzilla.mozilla.org/show_bug.cgi?id=1378527
+          await browser.action.openPopup();
+        } catch (e) {
+          // https://bugzilla.mozilla.org/show_bug.cgi?id=1799344
+        }
+
         return {
           success: true,
-          pake: await api.requestChallengePIN(),
         };
 
-      case "SET_CHALLENGE_PIN":
-        await api.setChallengePIN(message.pake, message.pin);
+      case "VERIFY_CHALLENGE":
+        await getAPI().verifyChallenge(message.pin);
         return {
           success: true,
         };
@@ -37,13 +50,16 @@ browser.runtime.onMessage.addListener(async (message) => {
       case "GET_LOGIN_NAMES_FOR_URL":
         return {
           success: true,
-          loginNames: await api.getLoginNamesForURL(message.tabId, message.url),
+          loginNames: await getAPI().getLoginNamesForURL(
+            message.tabId,
+            message.url,
+          ),
         };
 
       case "GET_PASSWORD_FOR_LOGIN_NAME":
         return {
           success: true,
-          loginName: await api.getPasswordForLoginName(
+          loginName: await getAPI().getPasswordForLoginName(
             message.tabId,
             message.url,
             message.loginName,
@@ -51,16 +67,19 @@ browser.runtime.onMessage.addListener(async (message) => {
         };
 
       case "FILL_PASSWORD": {
-        const { username, password } = await api.getPasswordForLoginName(
+        const { username, password } = await getAPI().getPasswordForLoginName(
           message.tabId,
           message.url,
           message.loginName,
         );
 
         const tab = await browser.tabs.get(message.tabId);
-        if (tab.id === undefined) throw "TAB_NOT_FOUND";
-        if (!tab.active) throw "TAB_INACTIVE";
-        if (tab.url !== message.url) throw "TAB_REDIRECTED";
+        if (tab.id === undefined)
+          throw new Error("AutoFill failed: tab no longer exists");
+        if (!tab.active)
+          throw new Error("AutoFill failed: tab is no longer active");
+        if (tab.url !== message.url)
+          throw new Error("AutoFill failed: tab has changed URL");
 
         await browser.scripting.executeScript({
           target: {
@@ -81,24 +100,7 @@ browser.runtime.onMessage.addListener(async (message) => {
         if (error !== undefined) throw error;
 
         const { success, warnings } = result;
-        for (const warning of warnings as string[]) {
-          switch (warning) {
-            case "MULTIPLE_PASSWORD_FIELDS":
-              console.warn(
-                `Multiple password input fields found on ${window.location}`,
-              );
-              break;
-
-            case "NO_USERNAME_FIELD":
-              console.warn(
-                `No username input field found on ${window.location}`,
-              );
-              break;
-
-            default:
-              console.warn(warning);
-          }
-        }
+        (warnings as string[]).forEach((warning) => console.warn(warning));
 
         return {
           success,
@@ -107,7 +109,7 @@ browser.runtime.onMessage.addListener(async (message) => {
       }
 
       case "COPY_PASSWORD": {
-        const { password } = await api.getPasswordForLoginName(
+        const { password } = await getAPI().getPasswordForLoginName(
           message.tabId,
           message.url,
           message.loginName,
@@ -121,9 +123,15 @@ browser.runtime.onMessage.addListener(async (message) => {
       }
     }
   } catch (e) {
+    console.error(e);
     return {
       success: false,
       error: e,
     };
   }
+});
+
+browser.runtime.onSuspend.addListener(() => {
+  api?.close();
+  api = null;
 });

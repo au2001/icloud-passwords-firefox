@@ -15,7 +15,7 @@ export const useReady = () => {
 
       setReady(ready);
     } catch (e: any) {
-      setError(e);
+      setError(e.message ?? e.toString());
     }
   };
 

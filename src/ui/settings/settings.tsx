@@ -57,18 +57,18 @@ export function SettingsView() {
   useEffect(() => {
     const listener = (newPermissions: browser.Permissions.Permissions) => {
       setPermissions((permissions) => ({
-        permissions: Array.from(
-          new Set(
+        permissions: [
+          ...new Set(
             (permissions.permissions ?? []).concat(
               newPermissions.permissions ?? [],
             ),
           ),
-        ),
-        origins: Array.from(
-          new Set(
+        ],
+        origins: [
+          ...new Set(
             (permissions.origins ?? []).concat(newPermissions.origins ?? []),
           ),
-        ),
+        ],
       }));
     };
 

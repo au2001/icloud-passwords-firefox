@@ -88,7 +88,7 @@ const refresh = throttle(() => {
       observe(form.passwordInput, form);
   }
 
-  for (const [input, cleanup] of Array.from(oldInputs.entries())) {
+  for (const [input, cleanup] of [...oldInputs.entries()]) {
     observing.delete(input);
     cleanup();
   }

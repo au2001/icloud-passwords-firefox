@@ -28,7 +28,7 @@ export const useLoginNames = (tabId?: number, url?: string) => {
 
       setLoginNames(loginNames);
     } catch (e: any) {
-      setError(e);
+      setError(e.message ?? e.toString());
     }
   };
 

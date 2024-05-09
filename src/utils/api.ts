@@ -1,486 +1,316 @@
-import sjcl from "sjcl";
 import browser, { Runtime } from "webextension-polyfill";
+import { Buffer } from "buffer";
 import { EventEmitter } from "events";
 import {
   Action,
-  BROWSER_NAME,
   Command,
-  GRP,
-  KEY_LEN,
   MSGTypes,
-  QUERY_STATUS_ERRORS,
   QueryStatus,
   SecretSessionVersion,
-} from "./constants";
+} from "./enums";
+import { SRPSession } from "./srp";
 import {
-  bitsToString,
-  calculateM,
-  calculateX,
-  createSessionKey,
-  decrypt,
-  encrypt,
-  randomWords,
-  stringToBase64,
-  stringToBits,
+  readBigInt,
+  throwQueryStatusError,
+  toBase64,
+  toBuffer,
 } from "./crypto";
 
+const BROWSER_NAME = "Firefox";
+const VERSION = "1.0";
+
 export class ApplePasswordManager extends EventEmitter {
-  private readonly tid: sjcl.BigNumber;
-  private readonly a: sjcl.BigNumber;
-
   private port?: Runtime.Port;
-  private capabilities?: {
-    shouldUseBase64: boolean;
-    secretSessionVersion: SecretSessionVersion;
-    canFillOneTimeCodes?: boolean;
-    operatingSystem: {
-      majorVersion?: number;
-      minorVersion?: number;
-      name?: string;
-    };
-    supportsSubURLs: boolean;
-    scanForOTPURI: boolean;
-  };
-  private verifier?: sjcl.BigNumber;
-  private encKey?: sjcl.BitArray;
-
-  constructor() {
-    super();
-
-    // Setup SecureRemotePassword (SRP)
-    this.tid = sjcl.bn.fromBits(randomWords(4));
-    this.a = sjcl.bn.fromBits(randomWords(8));
-  }
-
-  private _connect() {
-    if (this.port === undefined) {
-      this.port = browser.runtime.connectNative("com.apple.passwordmanager");
-
-      this.port.onDisconnect.addListener((port) => {
-        if (this.port !== port) return;
-
-        const message =
-          port.error?.message ?? browser.runtime.lastError?.message;
-
-        let error;
-        switch (message) {
-          case "No such native application com.apple.passwordmanager":
-          case "Specified native messaging host not found.":
-            error = "MISSING_CONNECT_NATIVE_HOST";
-            break;
-
-          case "Access to the specified native messaging host is forbidden.":
-            error = "MISSING_CONNECT_NATIVE_PERMISSION";
-            break;
-
-          default:
-            error = message;
-            break;
-        }
-
-        this.emit("error", error);
-
-        this.port = undefined;
-        this.emit("ready", false);
-      });
-    }
-
-    return this.port;
-  }
-
-  private async _readResponse<T extends Command>(cmd: T) {
-    return await new Promise((resolve, reject) => {
-      const callback = async (response: object) => {
-        if (!("cmd" in response) || response.cmd !== cmd) return;
-
-        try {
-          if ("payload" in response) {
-            const payload = response.payload;
-
-            if (typeof payload === "object" && payload !== null) {
-              response = payload;
-            } else if (typeof payload === "string") {
-              // Do nothing
-            } else {
-              throw `UNKNOWN_RESPONSE_PAYLOAD:${response}`;
-            }
-          }
-
-          if ("SMSG" in response) {
-            let smsg = response.SMSG;
-
-            if (typeof smsg === "string") {
-              try {
-                smsg = JSON.parse(smsg);
-              } catch (e) {
-                throw `INVALID_SMSG:${smsg}`;
-              }
-            }
-
-            if (typeof smsg !== "object" || smsg === null)
-              throw `UNKNOWN_RESPONSE_SMSG:${response}`;
-
-            if (!("SDATA" in smsg) || typeof smsg.SDATA !== "string")
-              throw "MISSING_SMSG_SDATA";
-            if (!("TID" in smsg) || typeof smsg.TID !== "string")
-              throw "MISSING_SMSG_TID";
-
-            const capabilities = await this.getCapabilities();
-            const tid = sjcl.bn.fromBits(
-              stringToBits(smsg.TID, capabilities.shouldUseBase64),
-            );
-            if (!tid.equals(this.tid)) throw "INVALID_SMSG_TID";
-
-            response = JSON.parse(
-              sjcl.codec.utf8String.fromBits(
-                decrypt(
-                  stringToBits(smsg.SDATA, capabilities.shouldUseBase64),
-                  this.encKey,
-                ),
-              ),
-            );
-          }
-
-          return resolve(response);
-        } catch (e) {
-          return reject(e);
-        } finally {
-          this.removeListener("error", callback);
-          port.onMessage.removeListener(callback);
-        }
-      };
-
-      const onError = (error: string | null) => {
-        this.removeListener("error", callback);
-        port.onMessage.removeListener(callback);
-        return reject(error);
-      };
-
-      this.addListener("error", onError);
-      const port = this._connect();
-      port.onMessage.addListener(callback);
-    });
-  }
-
-  private async _postMessage<T extends Command>(
-    cmd: T,
-    body: object = {},
-    expectResponse = true,
-  ): Promise<any> {
-    let response;
-
-    if (expectResponse) {
-      response = this._readResponse(cmd);
-    } else {
-      response = new Promise<void>((resolve, reject) => {
-        const onError = (error: string | null) => {
-          this.removeListener("error", onError);
-          clearTimeout(timeout);
-          return reject(error);
-        };
-
-        const timeout = setTimeout(() => {
-          this.removeListener("error", onError);
-          resolve();
-        }, 200);
-
-        this.addListener("error", onError);
-      });
-    }
-
-    this._connect().postMessage({
-      cmd,
-      ...body,
-    });
-
-    return await response;
-  }
+  private session?: SRPSession;
+  private lock = false;
+  private challengeTimestamp = 0;
 
   get ready() {
     return (
       this.port !== undefined &&
-      this.capabilities !== undefined &&
-      this.verifier !== undefined &&
-      this.encKey !== undefined
+      this.session !== undefined &&
+      this.session.serverPublicKey !== undefined &&
+      this.session.salt !== undefined &&
+      this.session.sharedKey !== undefined
     );
   }
 
-  async getCapabilities(refresh = false) {
-    if (this.capabilities === undefined || refresh) {
-      const { capabilities } = (await this._postMessage(Command.Hello)) ?? {};
+  private async _postMessage<T extends Command, R = any>(
+    cmd: T,
+    body: object = {},
+    delay = 5000,
+  ) {
+    if (this.port === undefined)
+      throw new Error("Invalid session state: connection closed");
+    if (this.lock) throw new Error("Invalid session state: locked");
+    this.lock = true;
 
-      this.capabilities = {
-        shouldUseBase64: capabilities.shouldUseBase64 ?? false,
-        secretSessionVersion:
-          capabilities.secretSessionVersion ??
-          SecretSessionVersion.SRPWithOldVerification,
-        canFillOneTimeCodes: capabilities.canFillOneTimeCodes ?? false,
-        operatingSystem: capabilities.operatingSystem ?? {},
-        supportsSubURLs: capabilities.supportsSubURLs ?? false,
-        scanForOTPURI: capabilities.scanForOTPURI ?? false,
-      };
+    try {
+      const response = new Promise<R | undefined>((resolve, reject) => {
+        const cleanup = () => {
+          clearTimeout(timeout);
+          this.removeListener("message", onMessage);
+          this.removeListener("error", onError);
+        };
+
+        const onMessage = (event: Event) => {
+          const message = (event as CustomEvent).detail ?? event;
+          if (message.cmd !== cmd) return;
+          cleanup();
+          return resolve(message);
+        };
+
+        const onError = (event: Event) => {
+          const error = (event as CustomEvent).detail ?? event;
+          cleanup();
+          return reject(error);
+        };
+
+        this.addListener("message", onMessage);
+        this.addListener("error", onError);
+
+        const timeout = setTimeout(() => {
+          cleanup();
+          resolve(undefined);
+        }, delay);
+      });
+
+      this.port.postMessage({
+        cmd,
+        ...body,
+      });
+
+      return await response;
+    } finally {
+      this.lock = false;
+    }
+  }
+
+  async connect() {
+    if (this.port === undefined) {
+      this.port = browser.runtime.connectNative("com.apple.passwordmanager");
+
+      this.port?.onMessage.addListener((message, port) => {
+        if (this.port !== port) return;
+
+        this.emit("message", {
+          cancelable: false,
+          detail: message,
+        });
+      });
+
+      this.port?.onDisconnect.addListener((port) => {
+        if (this.port !== port) return;
+
+        this.emit("error", {
+          cancelable: false,
+          detail: port.error ?? browser.runtime.lastError,
+        });
+
+        delete this.port;
+      });
+
+      delete this.session;
     }
 
-    return this.capabilities;
+    if (this.session === undefined) {
+      const { capabilities } = await this._postMessage(
+        Command.GET_CAPABILITIES,
+      );
+
+      if (
+        capabilities.secretSessionVersion !== undefined &&
+        capabilities.secretSessionVersion !==
+          SecretSessionVersion.SRP_WITH_RFC_VERIFICATION
+      ) {
+        throw new Error(
+          "Unsupported capabilities: should use RFC verification",
+        );
+      }
+
+      this.session = await SRPSession.new(capabilities.shouldUseBase64);
+    }
   }
 
-  async sendActiveTab(tabId: number, active: boolean) {
-    await this._postMessage(
-      Command.TabEvent,
-      {
-        tabId,
-        event: active ? 1 : 0,
-      },
-      false,
-    );
-  }
+  async requestChallenge() {
+    if (this.session === undefined)
+      throw new Error("Invalid session state: not initialized");
 
-  async requestChallengePIN() {
-    const capabilities = await this.getCapabilities();
+    // Allow to reopen the popup on Windows less than 5s after requesting a challenge
+    const challengeTimestamp = Date.now();
+    if (this.challengeTimestamp >= challengeTimestamp - 5 * 1000) return;
+    this.challengeTimestamp = challengeTimestamp;
 
-    const response = await this._postMessage(Command.ChallengePIN, {
+    delete this.session.serverPublicKey;
+    delete this.session.salt;
+    delete this.session.sharedKey;
+
+    const { payload } = await this._postMessage(Command.HANDSHAKE, {
       msg: {
         QID: "m0",
-        PAKE: stringToBase64(
-          JSON.stringify({
-            TID: bitsToString(
-              this.tid.toBits(),
-              true,
-              capabilities.shouldUseBase64,
-            ),
-            MSG: 0,
-            A: bitsToString(
-              GRP.g.powermod(this.a, GRP.N).toBits(),
-              true,
-              capabilities.shouldUseBase64,
-            ),
-            VER: "1.0",
-            PROTO: [
-              SecretSessionVersion.SRPWithOldVerification,
-              SecretSessionVersion.SRPWithRFCVerification,
-            ],
-          }),
-        ),
+        PAKE: toBase64({
+          TID: this.session.username,
+          MSG: MSGTypes.CLIENT_KEY_EXCHANGE,
+          A: this.session.serialize(toBuffer(this.session.clientPublicKey)),
+          VER: VERSION,
+          PROTO: [SecretSessionVersion.SRP_WITH_RFC_VERIFICATION],
+        }),
         HSTBRSR: BROWSER_NAME,
       },
     });
 
     let pake;
     try {
-      pake = JSON.parse(
-        sjcl.codec.utf8String.fromBits(sjcl.codec.base64.toBits(response.PAKE)),
-      );
+      pake = JSON.parse(Buffer.from(payload.PAKE, "base64").toString("utf8"));
     } catch (e) {
-      throw `INVALID_PAKE:${response.PAKE}`;
+      throw new Error("Invalid server hello: missing payload");
     }
 
-    if (
-      !this.tid.equals(
-        sjcl.bn.fromBits(stringToBits(pake.TID, capabilities.shouldUseBase64)),
-      )
-    ) {
-      throw "INVALID_PAKE_TID";
-    }
+    if (pake.TID !== this.session.username)
+      throw new Error("Invalid server hello: destined to another session");
 
-    if (!pake.MSG) throw "MISSING_PAKE_MSG";
-
-    if (parseInt(pake.MSG, 10) !== MSGTypes.MSG1)
-      throw `MESSAGE_MISMATCH:${pake.MSG}`;
-
-    if (
-      typeof pake.PROTO === "number" &&
-      Object.values(SecretSessionVersion).includes(pake.PROTO)
-    ) {
-      capabilities.secretSessionVersion = pake.PROTO;
-      this.capabilities = capabilities;
-    }
-
-    if (typeof pake.s !== "string") throw "MISSING_PAKE_S";
-    if (typeof pake.B !== "string") throw "MISSING_PAKE_B";
-
-    // if (pake.VER) const appVer = pake.VER;
-
-    const b = sjcl.bn.fromBits(
-      stringToBits(pake.B, capabilities.shouldUseBase64),
-    );
-
-    if (b.mod(GRP.N).equals(0)) throw "PAKE_MULMOD_ERROR";
-
-    return {
-      s: pake.s as string,
-      B: pake.B as string,
-    };
-  }
-
-  async setChallengePIN(pake: { s: string; B: string }, pin: string) {
-    const capabilities = await this.getCapabilities();
-
-    const x = calculateX(pake, this.tid, pin, capabilities.shouldUseBase64);
-
-    const verifier = GRP.g.powermod(x, GRP.N);
-
-    const sessionKey = createSessionKey(
-      pake,
-      this.a,
-      x,
-      capabilities.shouldUseBase64,
-    );
-
-    const encKey = sjcl.bitArray.bitSlice(sessionKey, 0, KEY_LEN);
-
-    const msg: Record<string, string> = {};
-    let hamk;
-    switch (capabilities.secretSessionVersion) {
-      case SecretSessionVersion.SRPWithRFCVerification: {
-        let m;
-        [m, hamk] = calculateM(
-          pake,
-          sessionKey,
-          bitsToString(this.tid.toBits(), true, capabilities.shouldUseBase64),
-          this.a,
-          capabilities.shouldUseBase64,
-        );
-
-        msg.M = bitsToString(m, false, capabilities.shouldUseBase64);
-        break;
-      }
-
-      case SecretSessionVersion.SRPWithOldVerification:
-        msg.v = bitsToString(
-          encrypt(
-            capabilities.shouldUseBase64
-              ? verifier.toBits()
-              : sjcl.codec.utf8String.toBits(verifier.toString()),
-            encKey,
-          ),
-          false,
-          capabilities.shouldUseBase64,
-        );
+    switch (pake.ErrCode) {
+      case undefined:
         break;
 
       default:
-        throw `UNKNOWN_PROTOCOL_VERSION:${capabilities.secretSessionVersion}`;
+        throw new Error(`Invalid server hello: error code ${pake.ErrCode}`);
     }
 
-    const response = await this._postMessage(Command.ChallengePIN, {
+    // macOS sends this as a number, but iCloud for Windows as a string
+    if (pake.MSG.toString() !== MSGTypes.SERVER_KEY_EXCHANGE.toString())
+      throw new Error("Invalid server hello: unexpected message");
+
+    if (pake.PROTO !== SecretSessionVersion.SRP_WITH_RFC_VERIFICATION)
+      throw new Error("Invalid server hello: unsupported protocol");
+
+    if ("VER" in pake && pake.VER !== VERSION)
+      throw new Error("Invalid server hello: unsupported version");
+
+    const serverPublicKey = readBigInt(this.session.deserialize(pake.B));
+    const salt = readBigInt(this.session.deserialize(pake.s));
+    this.session.setServerPublicKey(serverPublicKey, salt);
+  }
+
+  async verifyChallenge(password: string) {
+    if (this.session === undefined)
+      throw new Error("Invalid session state: not initialized");
+
+    await this.session.setSharedKey(password);
+
+    const m = await this.session.computeM();
+
+    const { payload } = await this._postMessage(Command.HANDSHAKE, {
       msg: {
         QID: "m2",
-        PAKE: stringToBase64(
-          JSON.stringify({
-            TID: bitsToString(
-              this.tid.toBits(),
-              true,
-              capabilities.shouldUseBase64,
-            ),
-            MSG: 2,
-            ...msg,
-          }),
-        ),
+        PAKE: toBase64({
+          TID: this.session.username,
+          MSG: MSGTypes.CLIENT_VERIFICATION,
+          M: this.session.serialize(m, false),
+        }),
       },
     });
 
-    let pake2;
+    let pake;
     try {
-      pake2 = JSON.parse(
-        sjcl.codec.utf8String.fromBits(sjcl.codec.base64.toBits(response.PAKE)),
-      );
+      pake = JSON.parse(Buffer.from(payload.PAKE, "base64").toString("utf8"));
     } catch (e) {
-      throw `INVALID_PAKE:${response.PAKE}`;
+      throw new Error("Invalid server verification: missing payload");
     }
 
-    if (
-      !this.tid.equals(
-        sjcl.bn.fromBits(stringToBits(pake2.TID, capabilities.shouldUseBase64)),
-      )
-    ) {
-      throw "INVALID_PAKE_TID";
+    if (pake.TID !== this.session.username) {
+      throw new Error(
+        "Invalid server verification: destined to another session",
+      );
     }
 
-    if (!pake2.MSG) throw "MISSING_PAKE_MSG";
+    // macOS sends this as a number, but iCloud for Windows as a string
+    if (pake.MSG.toString() !== MSGTypes.SERVER_VERIFICATION.toString())
+      throw new Error("Invalid server verification: unexpected message");
 
-    if (parseInt(pake2.MSG, 10) !== MSGTypes.MSG3)
-      throw `MESSAGE_MISMATCH:${pake2.MSG}`;
-
-    if (pake2.ErrCode !== 0) {
-      switch (pake2.ErrCode) {
-        case 1:
-          throw "INVALID_PIN";
-
-        default:
-          throw `UNKNOWN_PAKE_ERROR:${pake2.ErrCode}`;
-      }
-    }
-
-    switch (capabilities.secretSessionVersion) {
-      case SecretSessionVersion.SRPWithRFCVerification: {
-        if (!pake2.HAMK) {
-          throw "MISSING_HAMK";
-        }
-
-        const a = stringToBits(pake2.HAMK, capabilities.shouldUseBase64);
-        if (!sjcl.bitArray.equal(a, hamk!)) throw `INVALID_HAMK:${pake2.HAMK}`;
+    switch (pake.ErrCode) {
+      case 0:
         break;
-      }
 
-      case SecretSessionVersion.SRPWithOldVerification:
-        break;
+      case 1:
+        throw new Error("Incorrect challenge PIN");
 
       default:
-        throw `UNKNOWN_PROTOCOL_VERSION:${capabilities.secretSessionVersion}`;
+        throw new Error(
+          `Invalid server verification: error code ${pake.ErrCode}`,
+        );
     }
 
-    this.verifier = verifier;
-    this.encKey = encKey;
-    this.emit("ready", true);
+    const hmac = await this.session.computeHMAC(m);
+    if (readBigInt(this.session.deserialize(pake.HAMK)) !== readBigInt(hmac))
+      throw new Error("Invalid server verification: HAMK mismatch");
+  }
+
+  async sendActiveTab(tabId: number, active: boolean) {
+    await this._postMessage(Command.TAB_EVENT, {
+      tabId,
+      event: active ? 1 : 0,
+    });
   }
 
   async getLoginNamesForURL(tabId: number, url: string) {
-    const capabilities = await this.getCapabilities();
+    if (this.session === undefined)
+      throw new Error("Invalid session state: not initialized");
 
     const { hostname } = new URL(url);
 
-    const sdata = encrypt(
-      sjcl.codec.utf8String.toBits(
-        JSON.stringify({
-          ACT: Action.GhostSearch,
-          URL: hostname,
-        }),
-      ),
-      this.encKey,
+    const sdata = this.session.serialize(
+      await this.session.encrypt({
+        ACT: Action.GHOST_SEARCH,
+        URL: hostname,
+      }),
     );
 
-    const response = await this._postMessage(Command.GetLoginNames4URL, {
-      tabId,
-      frameId: 0,
-      url: hostname,
-      payload: {
-        QID: "CmdGetLoginNames4URL",
-        SMSG: {
-          TID: bitsToString(
-            this.tid.toBits(),
-            true,
-            capabilities.shouldUseBase64,
-          ),
-          SDATA: bitsToString(sdata, true, capabilities.shouldUseBase64),
+    const { payload } = await this._postMessage(
+      Command.GET_LOGIN_NAMES_FOR_URL,
+      {
+        tabId,
+        frameId: 0,
+        url: hostname,
+        payload: {
+          QID: "CmdGetLoginNames4URL",
+          SMSG: JSON.stringify({
+            TID: this.session.username,
+            SDATA: sdata,
+          }),
         },
       },
-    });
+    );
+
+    // macOS sends this as an object, Windows as a string
+    if (typeof payload.SMSG === "string")
+      payload.SMSG = JSON.parse(payload.SMSG);
+
+    if (payload.SMSG.TID !== this.session.username)
+      throw new Error("Invalid server response: destined to another session");
+
+    let response;
+    try {
+      const data = await this.session.decrypt(
+        this.session.deserialize(payload.SMSG.SDATA),
+      );
+      response = JSON.parse(data.toString("utf8"));
+    } catch (e) {
+      throw new Error("Invalid server response: missing payload");
+    }
 
     switch (response.STATUS) {
-      case QueryStatus.Success:
+      case QueryStatus.SUCCESS:
         return (response.Entries as any[]).map(({ USR, sites }) => ({
           username: USR,
           sites,
         }));
 
-      case QueryStatus.NoResults:
+      case QueryStatus.NO_RESULTS:
         return [];
 
       default:
-        throw (
-          QUERY_STATUS_ERRORS[response.STATUS as QueryStatus] ??
-          `UNKNOWN_QUERY_STATUS:${response.STATUS}`
-        );
+        throwQueryStatusError(response.STATUS);
     }
   }
 
@@ -489,40 +319,55 @@ export class ApplePasswordManager extends EventEmitter {
     url: string,
     loginName: { username: string; sites: string[] },
   ) {
-    const capabilities = await this.getCapabilities();
+    if (this.session === undefined)
+      throw new Error("Invalid session state: not initialized");
 
     const { hostname } = new URL(url);
 
-    const sdata = encrypt(
-      sjcl.codec.utf8String.toBits(
-        JSON.stringify({
-          ACT: Action.Search,
-          URL: hostname,
-          USR: loginName.username,
-        }),
-      ),
-      this.encKey,
+    const sdata = this.session.serialize(
+      await this.session.encrypt({
+        ACT: Action.SEARCH,
+        URL: hostname,
+        USR: loginName.username,
+      }),
     );
 
-    const response = await this._postMessage(Command.GetPassword4LoginName, {
-      tabId,
-      frameId: 0,
-      url: loginName.sites?.[0] ?? hostname,
-      payload: {
-        QID: "CmdGetPassword4LoginName",
-        SMSG: {
-          TID: bitsToString(
-            this.tid.toBits(),
-            true,
-            capabilities.shouldUseBase64,
-          ),
-          SDATA: bitsToString(sdata, true, capabilities.shouldUseBase64),
+    const { payload } = await this._postMessage(
+      Command.GET_PASSWORD_FOR_LOGIN_NAME,
+      {
+        tabId,
+        frameId: 0,
+        url: loginName.sites?.[0] ?? hostname,
+        payload: {
+          QID: "CmdGetPassword4LoginName",
+          SMSG: JSON.stringify({
+            TID: this.session.username,
+            SDATA: sdata,
+          }),
         },
       },
-    });
+      60 * 1000,
+    );
+
+    // macOS sends this as an object, Windows as a string
+    if (typeof payload.SMSG === "string")
+      payload.SMSG = JSON.parse(payload.SMSG);
+
+    if (payload.SMSG.TID !== this.session.username)
+      throw new Error("Invalid server response: destined to another session");
+
+    let response;
+    try {
+      const data = await this.session.decrypt(
+        this.session.deserialize(payload.SMSG.SDATA),
+      );
+      response = JSON.parse(data.toString("utf8"));
+    } catch (e) {
+      throw new Error("Invalid server response: missing payload");
+    }
 
     switch (response.STATUS) {
-      case QueryStatus.Success:
+      case QueryStatus.SUCCESS:
         return (response.Entries as any[]).map(({ USR, PWD, sites }) => ({
           username: USR,
           password: PWD,
@@ -530,10 +375,7 @@ export class ApplePasswordManager extends EventEmitter {
         }))[0];
 
       default:
-        throw (
-          QUERY_STATUS_ERRORS[response.STATUS as QueryStatus] ??
-          `UNKNOWN_QUERY_STATUS:${response.STATUS}`
-        );
+        throwQueryStatusError(response.STATUS);
     }
   }
 
@@ -541,7 +383,7 @@ export class ApplePasswordManager extends EventEmitter {
     const port = this.port;
     if (port === undefined) return;
 
-    this._postMessage(Command.EndOp);
+    this._postMessage(Command.END);
 
     await new Promise<void>((resolve) => {
       port.onDisconnect.addListener(() => resolve());

@@ -26,18 +26,14 @@ export function PasswordsView() {
     try {
       // Can't use GET_PASSWORD_FOR_LOGIN_NAME here
       // See https://bugzilla.mozilla.org/show_bug.cgi?id=1292701
-      const { success, warnings, error } = await browser.runtime.sendMessage({
+      await browser.runtime.sendMessage({
         cmd: `${action}_PASSWORD`,
         tabId: tab.id,
         url: tab.url,
         loginName,
       });
-
-      if (error !== undefined || !success) throw error;
-
-      for (const warning of warnings as string[]) console.warn(warning);
     } catch (e: any) {
-      setFillError(e);
+      setFillError(e.message ?? e.toString());
     }
   };
 
@@ -55,7 +51,7 @@ export function PasswordsView() {
       // Next time the user opens the extension, they will see the challenge view automatically
       window.close();
     } catch (e: any) {
-      setFillError(e);
+      setFillError(e.message ?? e.toString());
     }
   };
 
@@ -64,7 +60,7 @@ export function PasswordsView() {
   if (tab?.id === undefined || tab?.url === undefined)
     return <LoadingView action="CURRENT_TAB" />;
   if (new URL(tab.url).hostname === "")
-    return <ErrorView error={`URL_NOT_COMPATIBLE:${tab.url}`} />;
+    return <ErrorView error={`URL is not compatible: ${tab.url}`} />;
   if (loginNames === undefined)
     return <LoadingView action="GET_LOGIN_NAMES_FOR_URL" />;
 
@@ -74,7 +70,7 @@ export function PasswordsView() {
 
       {loginNames.length > 0 ? (
         <>
-          <h2>Choose a saved password to use:</h2>
+          <h2>Select an account to login with:</h2>
 
           <ul>
             {loginNames.map((loginName, i) => (
@@ -85,7 +81,6 @@ export function PasswordsView() {
                   handleFillPassword(loginName);
                 }}
               >
-                <KeyIcon title="Password item" />
                 <div>
                   <span>{loginName.username}</span>
                   <span>{loginName.sites[0] ?? ""}</span>

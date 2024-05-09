@@ -15,8 +15,13 @@ window.iCloudPasswordsFill = async (username, password) => {
   // TODO: Fix outside function usage (https://stackoverflow.com/q/45817227)
   const forms = getLoginForms();
 
-  if (forms.length === 0) throw "NO_PASSWORD_FIELD";
-  if (forms.length > 1) warnings.push("MULTIPLE_PASSWORD_FIELDS");
+  if (forms.length === 0) {
+    throw new Error("AutoFill failed: no password field on page");
+  } else if (forms.length > 1) {
+    warnings.push(
+      "Multiple passwords detected on page, only filling the first",
+    );
+  }
 
   const { usernameInput, passwordInput } = forms[0];
 
@@ -48,7 +53,7 @@ window.iCloudPasswordsFill = async (username, password) => {
   };
 
   if (usernameInput !== null) setNativeValue(usernameInput, username);
-  else warnings.push("NO_USERNAME_FIELD");
+  else warnings.push("No username field found on page");
 
   setNativeValue(passwordInput, password);
 
