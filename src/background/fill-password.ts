@@ -12,7 +12,6 @@ declare global {
 window.iCloudPasswordsFill = async (username, password) => {
   const warnings: string[] = [];
 
-  // TODO: Fix outside function usage (https://stackoverflow.com/q/45817227)
   const forms = getLoginForms();
 
   if (forms.length === 0) {
