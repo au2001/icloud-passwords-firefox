@@ -196,54 +196,62 @@ export class ApplePasswordManager extends EventEmitter {
     if (this.session === undefined)
       throw new Error("Invalid session state: not initialized");
 
-    await this.session.setSharedKey(password);
+    // Allow requesting a new challenge instantly
+    this.challengeTimestamp = 0;
 
-    const m = await this.session.computeM();
-
-    const { payload } = await this._postMessage(Command.HANDSHAKE, {
-      msg: {
-        QID: "m2",
-        PAKE: toBase64({
-          TID: this.session.username,
-          MSG: MSGTypes.CLIENT_VERIFICATION,
-          M: this.session.serialize(m, false),
-        }),
-      },
-    });
-
-    let pake;
     try {
-      pake = JSON.parse(Buffer.from(payload.PAKE, "base64").toString("utf8"));
-    } catch (e) {
-      throw new Error("Invalid server verification: missing payload");
-    }
+      await this.session.setSharedKey(password);
 
-    if (pake.TID !== this.session.username) {
-      throw new Error(
-        "Invalid server verification: destined to another session",
-      );
-    }
+      const m = await this.session.computeM();
 
-    // macOS sends this as a number, but iCloud for Windows as a string
-    if (pake.MSG.toString() !== MSGTypes.SERVER_VERIFICATION.toString())
-      throw new Error("Invalid server verification: unexpected message");
+      const { payload } = await this._postMessage(Command.HANDSHAKE, {
+        msg: {
+          QID: "m2",
+          PAKE: toBase64({
+            TID: this.session.username,
+            MSG: MSGTypes.CLIENT_VERIFICATION,
+            M: this.session.serialize(m, false),
+          }),
+        },
+      });
 
-    switch (pake.ErrCode) {
-      case 0:
-        break;
+      let pake;
+      try {
+        pake = JSON.parse(Buffer.from(payload.PAKE, "base64").toString("utf8"));
+      } catch (e) {
+        throw new Error("Invalid server verification: missing payload");
+      }
 
-      case 1:
-        throw new Error("Incorrect challenge PIN");
-
-      default:
+      if (pake.TID !== this.session.username) {
         throw new Error(
-          `Invalid server verification: error code ${pake.ErrCode}`,
+          "Invalid server verification: destined to another session",
         );
-    }
+      }
 
-    const hmac = await this.session.computeHMAC(m);
-    if (readBigInt(this.session.deserialize(pake.HAMK)) !== readBigInt(hmac))
-      throw new Error("Invalid server verification: HAMK mismatch");
+      // macOS sends this as a number, but iCloud for Windows as a string
+      if (pake.MSG.toString() !== MSGTypes.SERVER_VERIFICATION.toString())
+        throw new Error("Invalid server verification: unexpected message");
+
+      switch (pake.ErrCode) {
+        case 0:
+          break;
+
+        case 1:
+          throw new Error("Incorrect challenge PIN");
+
+        default:
+          throw new Error(
+            `Invalid server verification: error code ${pake.ErrCode}`,
+          );
+      }
+
+      const hmac = await this.session.computeHMAC(m);
+      if (readBigInt(this.session.deserialize(pake.HAMK)) !== readBigInt(hmac))
+        throw new Error("Invalid server verification: HAMK mismatch");
+    } catch (e) {
+      delete this.session.sharedKey;
+      throw e;
+    }
   }
 
   async sendActiveTab(tabId: number, active: boolean) {
