@@ -1,5 +1,5 @@
 import browser from "webextension-polyfill";
-import { LoginForm, getLoginForms } from "../utils/dom";
+import { LoginForm, fillLoginForm, getLoginForms } from "../utils/dom";
 import { throttle } from "../utils/timings";
 
 const observing = new Map<HTMLInputElement, () => void>();
@@ -7,12 +7,16 @@ const observing = new Map<HTMLInputElement, () => void>();
 const observe = (input: HTMLInputElement, form: LoginForm) => {
   let iframe: HTMLIFrameElement | undefined;
 
-  const getSource = () =>
-    `${browser.runtime.getURL("./in_page.html")}#u=${encodeURIComponent(
-      window.location.href,
-    )}&p=${input === form.passwordInput ? 1 : 0}&q=${encodeURIComponent(
-      form.usernameInput?.value ?? "",
-    )}`;
+  const getSource = () => {
+    const params = new URLSearchParams();
+    params.set("u", window.location.href);
+    params.set("p", input === form.passwordInput ? "1" : "0");
+
+    const query = form.usernameInput?.value ?? "";
+    if (query !== "") params.set("q", query);
+
+    return `${browser.runtime.getURL("./in_page.html")}#${params.toString()}`;
+  };
 
   const onFocus = () => {
     if (iframe !== undefined) {
@@ -58,12 +62,30 @@ const observe = (input: HTMLInputElement, form: LoginForm) => {
     iframe = undefined;
   };
 
+  const onMessage = async (message: any) => {
+    if (iframe === undefined) return;
+
+    switch (message.cmd) {
+      case "FILL_PASSWORD": {
+        const { username, password } = message;
+        const warnings = fillLoginForm(form, username, password);
+        onBlur();
+
+        return {
+          success: true,
+          warnings,
+        };
+      }
+    }
+  };
+
   if (input === document.activeElement) onFocus();
 
   input.addEventListener("focus", onFocus);
   input.addEventListener("input", onInput);
   input.addEventListener("keydown", onKeyPress);
   input.addEventListener("blur", onBlur);
+  browser.runtime.onMessage.addListener(onMessage);
 
   // Disable Firefox's native autocomplete
   input.setAttribute("autocomplete", "off");
@@ -74,6 +96,7 @@ const observe = (input: HTMLInputElement, form: LoginForm) => {
     input.removeEventListener("input", onInput);
     input.removeEventListener("keydown", onKeyPress);
     input.removeEventListener("blur", onBlur);
+    browser.runtime.onMessage.removeListener(onMessage);
   };
   observing.set(input, cleanup);
 };

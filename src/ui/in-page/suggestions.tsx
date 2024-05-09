@@ -1,20 +1,35 @@
-import { useMemo } from "react";
-import { useLoginNames } from "../shared/hooks/use-login-names";
+import { useMemo, useState } from "react";
+import browser from "webextension-polyfill";
+import { LoginName, useLoginNames } from "../shared/hooks/use-login-names";
 import { KeyIcon } from "../shared/icons/key";
 import styles from "./suggestions.module.scss";
 
 interface Props {
-  tabId: number;
   url: string;
   isPassword: boolean;
   query: string;
 }
 
-export function SuggestionsView({ tabId, url, isPassword, query }: Props) {
-  isPassword;
-  query;
+export function SuggestionsView({ url, query }: Props) {
+  const { loginNames, error } = useLoginNames(-1, url);
+  const [fillError, setFillError] = useState<string>();
 
-  const { loginNames, error } = useLoginNames(tabId, url);
+  const handleFillPassword = async (loginName: LoginName) => {
+    setFillError(undefined);
+
+    try {
+      const { success, error } = await browser.runtime.sendMessage({
+        cmd: "FILL_PASSWORD",
+        url,
+        loginName,
+        forwardToContentScript: true,
+      });
+
+      if (error !== undefined || !success) throw error;
+    } catch (e: any) {
+      setFillError(e.message ?? e.toString());
+    }
+  };
 
   const matchingLoginNames = useMemo(
     () =>
@@ -23,6 +38,7 @@ export function SuggestionsView({ tabId, url, isPassword, query }: Props) {
   );
 
   if (error !== undefined) return <p>Error: {error}</p>;
+  if (fillError !== undefined) return <p>Error: {fillError}</p>;
   if (matchingLoginNames === undefined) return <p>Loading...</p>;
 
   return (
@@ -34,6 +50,7 @@ export function SuggestionsView({ tabId, url, isPassword, query }: Props) {
               key={i}
               onClick={(e) => {
                 e.preventDefault();
+                handleFillPassword(loginName);
               }}
             >
               <KeyIcon title="Password item" />

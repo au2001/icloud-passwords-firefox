@@ -161,9 +161,11 @@ export function ErrorView({ error }: Props) {
 
   const handleReload = async () => {
     try {
-      await browser.runtime.sendMessage({
+      const { success, error } = await browser.runtime.sendMessage({
         cmd: "LOCK",
       });
+
+      if (error !== undefined || !success) throw error;
     } catch (e) {
       console.error(e);
     }

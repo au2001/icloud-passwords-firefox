@@ -6,7 +6,6 @@ import { LoginName, useLoginNames } from "../shared/hooks/use-login-names";
 import { LoadingView } from "./loading";
 import { ErrorView } from "./error";
 import { Header } from "../shared/header";
-import { KeyIcon } from "../shared/icons/key";
 import { CopyIcon } from "../shared/icons/copy";
 import styles from "./passwords.module.scss";
 
@@ -26,12 +25,14 @@ export function PasswordsView() {
     try {
       // Can't use GET_PASSWORD_FOR_LOGIN_NAME here
       // See https://bugzilla.mozilla.org/show_bug.cgi?id=1292701
-      await browser.runtime.sendMessage({
+      const { success, error } = await browser.runtime.sendMessage({
         cmd: `${action}_PASSWORD`,
         tabId: tab.id,
         url: tab.url,
         loginName,
       });
+
+      if (error !== undefined || !success) throw error;
     } catch (e: any) {
       setFillError(e.message ?? e.toString());
     }

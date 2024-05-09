@@ -4,7 +4,7 @@ import { ApplePasswordManager } from "../utils/api";
 let api: ApplePasswordManager | null = null;
 const getAPI = () => (api ??= new ApplePasswordManager());
 
-browser.runtime.onMessage.addListener(async (message) => {
+browser.runtime.onMessage.addListener(async (message, sender) => {
   try {
     switch (message.cmd) {
       case "IS_READY":
@@ -68,12 +68,12 @@ browser.runtime.onMessage.addListener(async (message) => {
 
       case "FILL_PASSWORD": {
         const { username, password } = await getAPI().getPasswordForLoginName(
-          message.tabId,
+          message.tabId ?? sender.tab?.id ?? -1,
           message.url,
           message.loginName,
         );
 
-        const tab = await browser.tabs.get(message.tabId);
+        const tab = sender.tab ?? (await browser.tabs.get(message.tabId));
         if (tab.id === undefined)
           throw new Error("AutoFill failed: tab no longer exists");
         if (!tab.active)
@@ -81,31 +81,46 @@ browser.runtime.onMessage.addListener(async (message) => {
         if (tab.url !== message.url)
           throw new Error("AutoFill failed: tab has changed URL");
 
-        await browser.scripting.executeScript({
-          target: {
-            tabId: tab.id,
-          },
-          files: ["./fill_password.js"],
-        });
+        if (message.forwardToContentScript) {
+          const { success, warnings } = await browser.tabs.sendMessage(tab.id, {
+            cmd: "FILL_PASSWORD",
+            username,
+            password,
+          });
 
-        const [{ result, error }] = await browser.scripting.executeScript({
-          target: {
-            tabId: tab.id,
-          },
-          func: (username, password) =>
-            window.iCloudPasswordsFill(username, password),
-          args: [username, password],
-        });
+          (warnings as string[]).forEach((warning) => console.warn(warning));
 
-        if (error !== undefined) throw error;
+          return {
+            success,
+            warnings,
+          };
+        } else {
+          await browser.scripting.executeScript({
+            target: {
+              tabId: tab.id,
+            },
+            files: ["./fill_password.js"],
+          });
 
-        const { success, warnings } = result;
-        (warnings as string[]).forEach((warning) => console.warn(warning));
+          const [{ result, error }] = await browser.scripting.executeScript({
+            target: {
+              tabId: tab.id,
+            },
+            func: (username, password) =>
+              window.iCloudPasswordsFill(username, password),
+            args: [username, password],
+          });
 
-        return {
-          success,
-          warnings,
-        };
+          if (error !== undefined) throw error;
+
+          const { success, warnings } = result;
+          (warnings as string[]).forEach((warning) => console.warn(warning));
+
+          return {
+            success,
+            warnings,
+          };
+        }
       }
 
       case "COPY_PASSWORD": {

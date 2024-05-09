@@ -9,7 +9,6 @@ export function InPageView() {
   const { ready, error } = useReady();
 
   const search = new URLSearchParams(pathname.substring(1));
-  const tabId = parseInt(search.get("t") ?? "-1");
   const url = search.get("u") ?? window.location.href;
   const isPassword = search.get("p") === "1";
   const query = search.get("q") ?? "";
@@ -21,12 +20,7 @@ export function InPageView() {
     <>
       <Header />
       {ready ? (
-        <SuggestionsView
-          tabId={tabId}
-          url={url}
-          isPassword={isPassword}
-          query={query}
-        />
+        <SuggestionsView url={url} isPassword={isPassword} query={query} />
       ) : (
         <ChallengeView />
       )}
