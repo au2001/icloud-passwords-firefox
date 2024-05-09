@@ -38,30 +38,34 @@ export class ApplePasswordManager extends EventEmitter {
   private async _postMessage<T extends Command, R = any>(
     cmd: T,
     body: object = {},
-    delay = 5000,
+    delay: number | null = 5000,
   ) {
     if (this.port === undefined)
       throw new Error("Invalid session state: connection closed");
     if (this.lock) throw new Error("Invalid session state: locked");
-    this.lock = true;
+    if (delay !== null) this.lock = true;
 
     try {
       const response = new Promise<R | undefined>((resolve, reject) => {
+        let timeout: NodeJS.Timeout | undefined;
+
         const cleanup = () => {
           clearTimeout(timeout);
           this.removeListener("message", onMessage);
           this.removeListener("error", onError);
         };
 
-        const onMessage = (event: Event) => {
-          const message = (event as CustomEvent).detail ?? event;
+        const onMessage = (message: any) => {
           if (message.cmd !== cmd) return;
           cleanup();
           return resolve(message);
         };
 
-        const onError = (event: Event) => {
-          const error = (event as CustomEvent).detail ?? event;
+        const onError = (
+          error?:
+            | browser.Runtime.PortErrorType
+            | browser.Runtime.PropertyLastErrorType,
+        ) => {
           cleanup();
           return reject(error);
         };
@@ -69,10 +73,12 @@ export class ApplePasswordManager extends EventEmitter {
         this.addListener("message", onMessage);
         this.addListener("error", onError);
 
-        const timeout = setTimeout(() => {
-          cleanup();
-          resolve(undefined);
-        }, delay);
+        if (delay !== null) {
+          timeout = setTimeout(() => {
+            cleanup();
+            reject(new Error("Timeout while waiting for response"));
+          }, delay);
+        }
       });
 
       this.port.postMessage({
@@ -82,7 +88,7 @@ export class ApplePasswordManager extends EventEmitter {
 
       return await response;
     } finally {
-      this.lock = false;
+      if (delay !== null) this.lock = false;
     }
   }
 
@@ -93,24 +99,20 @@ export class ApplePasswordManager extends EventEmitter {
       this.port?.onMessage.addListener((message, port) => {
         if (this.port !== port) return;
 
-        this.emit("message", {
-          cancelable: false,
-          detail: message,
-        });
+        this.emit("message", message);
       });
 
       this.port?.onDisconnect.addListener((port) => {
         if (this.port !== port) return;
 
-        this.emit("error", {
-          cancelable: false,
-          detail: port.error ?? browser.runtime.lastError,
-        });
+        this.emit("error", port.error ?? browser.runtime.lastError);
 
         delete this.port;
       });
 
       delete this.session;
+      this.lock = false;
+      this.challengeTimestamp = 0;
     }
 
     if (this.session === undefined) {
@@ -354,7 +356,7 @@ export class ApplePasswordManager extends EventEmitter {
           }),
         },
       },
-      60 * 1000,
+      null,
     );
 
     // macOS sends this as an object, Windows as a string
