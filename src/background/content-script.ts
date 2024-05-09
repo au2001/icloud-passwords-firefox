@@ -9,7 +9,10 @@ const observe = (input: HTMLInputElement, form: LoginForm) => {
 
   const getSource = () => {
     const params = new URLSearchParams();
-    params.set("u", window.location.href);
+    params.set(
+      "u",
+      window === window.top ? window.location.href : document.referrer,
+    );
     params.set("p", input === form.passwordInput ? "1" : "0");
 
     const query = form.usernameInput?.value ?? "";
