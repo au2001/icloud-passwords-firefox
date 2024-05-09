@@ -32,14 +32,6 @@
   "background": {
     "scripts": ["./background.js"]
   },
-  "content_scripts": [
-    {
-      "js": ["content_script.js"],
-      "matches": ["<all_urls>"],
-      "run_at": "document_idle",
-      "all_frames": true
-    }
-  ],
   "web_accessible_resources": [
     {
       "resources": ["/in_page.html", "/in_page.js", "/in_page.js.map"],

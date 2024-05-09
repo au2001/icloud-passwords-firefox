@@ -35,26 +35,6 @@ export function SettingsView() {
   }, []);
 
   useEffect(() => {
-    const listener = (oldPermissions: browser.Permissions.Permissions) => {
-      const oldPermissionSet = new Set<string>(oldPermissions.permissions);
-      const oldOriginSet = new Set(oldPermissions.origins);
-
-      setPermissions((permissions) => ({
-        permissions: permissions.permissions?.filter(
-          (permission) => !oldPermissionSet.has(permission),
-        ),
-        origins: permissions.origins?.filter(
-          (origin) => !oldOriginSet.has(origin),
-        ),
-      }));
-    };
-
-    browser.permissions.onRemoved.addListener(listener);
-
-    return () => browser.permissions.onRemoved.removeListener(listener);
-  }, []);
-
-  useEffect(() => {
     const listener = (newPermissions: browser.Permissions.Permissions) => {
       setPermissions((permissions) => ({
         permissions: [
@@ -75,6 +55,26 @@ export function SettingsView() {
     browser.permissions.onAdded.addListener(listener);
 
     return () => browser.permissions.onAdded.removeListener(listener);
+  }, []);
+
+  useEffect(() => {
+    const listener = (oldPermissions: browser.Permissions.Permissions) => {
+      const oldPermissionSet = new Set<string>(oldPermissions.permissions);
+      const oldOriginSet = new Set(oldPermissions.origins);
+
+      setPermissions((permissions) => ({
+        permissions: permissions.permissions?.filter(
+          (permission) => !oldPermissionSet.has(permission),
+        ),
+        origins: permissions.origins?.filter(
+          (origin) => !oldOriginSet.has(origin),
+        ),
+      }));
+    };
+
+    browser.permissions.onRemoved.addListener(listener);
+
+    return () => browser.permissions.onRemoved.removeListener(listener);
   }, []);
 
   const setInPage = async (inPage: boolean) => {

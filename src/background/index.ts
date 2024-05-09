@@ -150,3 +150,46 @@ browser.runtime.onSuspend.addListener(() => {
   api?.close();
   api = null;
 });
+
+const updateContentScript = async () => {
+  const { settings } = await browser.storage.sync.get("settings");
+  const { permissions, origins } = await browser.permissions.getAll();
+
+  try {
+    if (
+      settings.inPage &&
+      permissions?.includes("tabs") &&
+      origins?.includes("<all_urls>")
+    ) {
+      await browser.scripting.registerContentScripts([
+        {
+          id: "content_script",
+          js: ["content_script.js"],
+          matches: ["<all_urls>"],
+          runAt: "document_idle",
+          allFrames: true,
+        },
+      ]);
+    } else {
+      await browser.scripting.unregisterContentScripts({
+        ids: ["content_script"],
+      });
+    }
+  } catch (e) {
+    if (
+      e instanceof Error &&
+      (e.message ===
+        'Content script with id "content_script" is already registered.' ||
+        e.message === 'Content script with id "content_script" does not exist.')
+    ) {
+      return;
+    }
+
+    throw e;
+  }
+};
+
+updateContentScript();
+browser.storage.sync.onChanged.addListener(updateContentScript);
+browser.permissions.onAdded.addListener(updateContentScript);
+browser.permissions.onRemoved.addListener(updateContentScript);
