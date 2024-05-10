@@ -136,6 +136,15 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
           success: true,
         };
       }
+
+      case "GET_ONE_TIME_CODES":
+        return {
+          success: true,
+          oneTimeCodes: await getAPI().getOneTimeCodes(
+            message.tabId,
+            message.url,
+          ),
+        };
     }
   } catch (e) {
     console.error(e);
