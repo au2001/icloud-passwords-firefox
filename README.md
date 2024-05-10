@@ -75,7 +75,7 @@ The source code for the Golang executable is available [in the `scripts/install`
 | Copy account password to clipboard | ✅                                                                 |
 | Generate new secure passwords      | ✅                                                                 |
 | In-page auto-complete suggestions  | ✅                                                                 |
-| Search through existing accounts   | [⛅️](https://github.com/au2001/icloud-passwords-firefox/issues/5)  |
+| Search through existing accounts   | [⛅️](https://github.com/au2001/icloud-passwords-firefox/issues/5) |
 | Auto-fill one-time codes           | [❌](https://github.com/au2001/icloud-passwords-firefox/issues/8)  |
 | Copy one-time codes to clipboard   | [❌](https://github.com/au2001/icloud-passwords-firefox/issues/8)  |
 | Register one-time codes            | [❌](https://github.com/au2001/icloud-passwords-firefox/issues/8)  |

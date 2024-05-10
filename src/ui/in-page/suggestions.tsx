@@ -2,6 +2,9 @@ import { useMemo, useState } from "react";
 import browser from "webextension-polyfill";
 import { LoginName, useLoginNames } from "../shared/hooks/use-login-names";
 import { KeyIcon } from "../shared/icons/key";
+import { LoadingView } from "../shared/loading";
+import { ErrorView } from "../shared/error";
+import { Header } from "../shared/header";
 import styles from "./suggestions.module.scss";
 
 interface Props {
@@ -37,39 +40,44 @@ export function SuggestionsView({ url, query }: Props) {
     [loginNames, query],
   );
 
-  if (error !== undefined) return <p>Error: {error}</p>;
-  if (fillError !== undefined) return <p>Error: {fillError}</p>;
-  if (matchingLoginNames === undefined) return <p>Loading...</p>;
+  if (error !== undefined) return <ErrorView error={error} />;
+  if (fillError !== undefined) return <ErrorView error={fillError} />;
+  if (matchingLoginNames === undefined)
+    return <LoadingView action="GET_LOGIN_NAMES_FOR_URL" />;
 
   return (
-    <div className={styles.suggestions}>
-      {matchingLoginNames.length > 0 ? (
-        <ul>
-          {matchingLoginNames.map((loginName, i) => (
-            <li
-              key={i}
-              onClick={(e) => {
-                e.preventDefault();
-                handleFillPassword(loginName);
-              }}
-            >
-              <KeyIcon title="Password item" />
-              <div>
-                <span>{loginName.username}</span>
-                <span>{loginName.sites[0] ?? ""}</span>
-              </div>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p>
-          {query === "" ? (
-            <>No passwords saved on this website.</>
-          ) : (
-            <>No matching passwords found for this website.</>
-          )}
-        </p>
-      )}
-    </div>
+    <>
+      <Header />
+
+      <div className={styles.suggestions}>
+        {matchingLoginNames.length > 0 ? (
+          <ul>
+            {matchingLoginNames.map((loginName, i) => (
+              <li
+                key={i}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleFillPassword(loginName);
+                }}
+              >
+                <KeyIcon title="Password item" />
+                <div>
+                  <span>{loginName.username}</span>
+                  <span>{loginName.sites[0] ?? ""}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>
+            {query === "" ? (
+              <>No passwords saved on this website.</>
+            ) : (
+              <>No matching passwords found for this website.</>
+            )}
+          </p>
+        )}
+      </div>
+    </>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import browser from "webextension-polyfill";
-import { LoadingView } from "./loading";
-import { ErrorView } from "./error";
+import { LoadingView } from "../shared/loading";
+import { ErrorView } from "../shared/error";
 import styles from "./challenge.module.scss";
 
 interface Props {

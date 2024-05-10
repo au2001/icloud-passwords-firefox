@@ -36,7 +36,10 @@ export function ErrorView({ error }: Props) {
           cancelled.
         </>
       );
-    } else if (error.startsWith("Loading timed out while waiting for ")) {
+    } else if (
+      error === "Timeout while waiting for response" ||
+      error.startsWith("Loading timed out while waiting for ")
+    ) {
       return (
         <>
           iCloud Keychain failed to respond in time. Please try reinstalling the
@@ -121,15 +124,19 @@ export function ErrorView({ error }: Props) {
           to use the extension.
         </>
       );
-    } else if (error === "QUERY_DUPLICATE_ITEM") {
+    } else if (error === "Duplicate item in query") {
       return <>An account already exists under that name.</>;
-    } else if (error === "QUERY_FAILED_TO_DELETE") {
+    } else if (error === "Query failed to delete") {
       return <>Could not delete this account.</>;
-    } else if (error === "QUERY_FAILED_TO_UPDATE") {
+    } else if (error === "Query failed to update") {
       return <>Could not update this account.</>;
-    } else if (error === "QUERY_NO_RESULTS") {
+    } else if (error === "No query results") {
       return <>This account could not be found.</>;
-    } else if (error === "UNKNOWN_PROTOCOL_VERSION") {
+    } else if (
+      error === "Unsupported capabilities: should use RFC verification" ||
+      error === "Invalid server hello: unsupported protocol" ||
+      error === "Invalid server hello: unsupported version"
+    ) {
       if (
         navigator.platform === "MacIntel" ||
         navigator.userAgent.includes("Intel Mac OS X")

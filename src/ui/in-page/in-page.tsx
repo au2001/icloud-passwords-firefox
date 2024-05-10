@@ -1,8 +1,9 @@
 import { useLocation } from "react-router-dom";
-import { Header } from "../shared/header";
 import { useReady } from "../shared/hooks/use-ready";
 import { ChallengeView } from "./challenge";
 import { SuggestionsView } from "./suggestions";
+import { ErrorView } from "../shared/error";
+import { LoadingView } from "../shared/loading";
 
 export function InPageView() {
   const { pathname } = useLocation();
@@ -13,12 +14,11 @@ export function InPageView() {
   const isPassword = search.get("p") === "1";
   const query = search.get("q") ?? "";
 
-  if (error !== undefined) return <p>Error: {error}</p>;
-  if (ready === undefined) return <p>Loading...</p>;
+  if (error !== undefined) return <ErrorView error={error} />;
+  if (ready === undefined) return <LoadingView action="IS_READY" />;
 
   return (
     <>
-      <Header />
       {ready ? (
         <SuggestionsView url={url} isPassword={isPassword} query={query} />
       ) : (

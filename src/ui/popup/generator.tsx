@@ -5,7 +5,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { ErrorView } from "./error";
+import { ErrorView } from "../shared/error";
 import { Header } from "../shared/header";
 import styles from "./generator.module.scss";
 

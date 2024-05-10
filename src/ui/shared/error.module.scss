@@ -1,6 +1,11 @@
 @import "../shared/styles/lib";
 
 .error {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  justify-content: center;
+
   padding: 20px;
   text-align: center;
   color: $color-text-error;

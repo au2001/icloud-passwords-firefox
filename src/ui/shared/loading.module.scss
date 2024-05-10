@@ -1,6 +1,11 @@
 @import "../shared/styles/lib";
 
 .loading {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  justify-content: center;
+
   padding: 20px;
   text-align: center;
 }

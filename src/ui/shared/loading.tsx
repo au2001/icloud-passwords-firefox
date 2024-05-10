@@ -25,10 +25,11 @@ export function LoadingView({ action }: Props) {
     return () => clearInterval(interval);
   }, [timedOut]);
 
-  if (timedOut)
+  if (timedOut) {
     return (
       <ErrorView error={`Loading timed out while waiting for ${action}`} />
     );
+  }
 
   return <p className={styles.loading}>Loading{".".repeat((count + 3) % 4)}</p>;
 }

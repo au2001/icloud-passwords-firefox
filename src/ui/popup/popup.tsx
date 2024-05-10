@@ -3,8 +3,8 @@ import { useReady } from "../shared/hooks/use-ready";
 import { ChallengeView } from "./challenge";
 import { PasswordsView } from "./passwords";
 import { GeneratorView } from "./generator";
-import { LoadingView } from "./loading";
-import { ErrorView } from "./error";
+import { LoadingView } from "../shared/loading";
+import { ErrorView } from "../shared/error";
 
 export function PopupView() {
   const { ready, error, refetch } = useReady();
