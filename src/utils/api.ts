@@ -22,7 +22,6 @@ const VERSION = "1.0";
 export class ApplePasswordManager extends EventEmitter {
   private port?: Runtime.Port;
   private session?: SRPSession;
-  private lock = false;
   private challengeTimestamp = 0;
 
   get ready() {
@@ -42,54 +41,48 @@ export class ApplePasswordManager extends EventEmitter {
   ) {
     if (this.port === undefined)
       throw new Error("Invalid session state: connection closed");
-    if (this.lock) throw new Error("Invalid session state: locked");
-    if (delay !== null) this.lock = true;
 
-    try {
-      const response = new Promise<R | undefined>((resolve, reject) => {
-        let timeout: NodeJS.Timeout | undefined;
+    const response = new Promise<R | undefined>((resolve, reject) => {
+      let timeout: NodeJS.Timeout | undefined;
 
-        const cleanup = () => {
-          clearTimeout(timeout);
-          this.removeListener("message", onMessage);
-          this.removeListener("error", onError);
-        };
+      const cleanup = () => {
+        clearTimeout(timeout);
+        this.removeListener("message", onMessage);
+        this.removeListener("error", onError);
+      };
 
-        const onMessage = (message: any) => {
-          if (message.cmd !== cmd) return;
+      const onMessage = (message: any) => {
+        if (message.cmd !== cmd) return;
+        cleanup();
+        return resolve(message);
+      };
+
+      const onError = (
+        error?:
+          | browser.Runtime.PortErrorType
+          | browser.Runtime.PropertyLastErrorType,
+      ) => {
+        cleanup();
+        return reject(error);
+      };
+
+      this.addListener("message", onMessage);
+      this.addListener("error", onError);
+
+      if (delay !== null) {
+        timeout = setTimeout(() => {
           cleanup();
-          return resolve(message);
-        };
+          reject(new Error("Timeout while waiting for response"));
+        }, delay);
+      }
+    });
 
-        const onError = (
-          error?:
-            | browser.Runtime.PortErrorType
-            | browser.Runtime.PropertyLastErrorType,
-        ) => {
-          cleanup();
-          return reject(error);
-        };
+    this.port.postMessage({
+      cmd,
+      ...body,
+    });
 
-        this.addListener("message", onMessage);
-        this.addListener("error", onError);
-
-        if (delay !== null) {
-          timeout = setTimeout(() => {
-            cleanup();
-            reject(new Error("Timeout while waiting for response"));
-          }, delay);
-        }
-      });
-
-      this.port.postMessage({
-        cmd,
-        ...body,
-      });
-
-      return await response;
-    } finally {
-      if (delay !== null) this.lock = false;
-    }
+    return await response;
   }
 
   async connect() {
@@ -111,7 +104,6 @@ export class ApplePasswordManager extends EventEmitter {
       });
 
       delete this.session;
-      this.lock = false;
       this.challengeTimestamp = 0;
     }
 
