@@ -443,6 +443,68 @@ export class ApplePasswordManager extends EventEmitter {
     }
   }
 
+  async fetchOneTimeCode(tabId: number, url: string, username: string) {
+    if (this.session === undefined)
+      throw new Error("Invalid session state: not initialized");
+
+    const sdata = this.session.serialize(
+      await this.session.encrypt({
+        ACT: Action.SEARCH,
+        TYPE: "oneTimeCodes",
+        frameURLs: [url],
+        username,
+      }),
+    );
+
+    const { payload } = await this._postMessage(
+      Command.DID_FILL_ONE_TIME_CODE,
+      {
+        tabId,
+        frameId: 0,
+        payload: {
+          QID: "CmdDidFillOneTimeCode",
+          SMSG: JSON.stringify({
+            TID: this.session.username,
+            SDATA: sdata,
+          }),
+        },
+      },
+      null,
+    );
+
+    // macOS sends this as an object, Windows as a string
+    if (typeof payload.SMSG === "string")
+      payload.SMSG = JSON.parse(payload.SMSG);
+
+    if (payload.SMSG.TID !== this.session.username)
+      throw new Error("Invalid server response: destined to another session");
+
+    let response;
+    try {
+      const data = await this.session.decrypt(
+        this.session.deserialize(payload.SMSG.SDATA),
+      );
+      response = JSON.parse(data.toString("utf8"));
+    } catch (e) {
+      throw new Error("Invalid server response: missing payload");
+    }
+
+    switch (response.STATUS) {
+      case QueryStatus.SUCCESS: {
+        const { username, domain, source, code } = response.Entries[0];
+        return {
+          username,
+          domain,
+          source,
+          code,
+        };
+      }
+
+      default:
+        throwQueryStatusError(response.STATUS);
+    }
+  }
+
   async close() {
     const port = this.port;
     if (port === undefined) return;
