@@ -43,7 +43,7 @@ For some operating systems, additional steps are required for the extension to w
 1. Install [iCloud for Windows](https://support.apple.com/kb/DL1455).
 2. Enable the `Passwords` option.
 3. Click on `Install Extension...` for either Microsoft Edge or Google Chrome.
-4. Download the `keychain_passwords_for_macos_install` file from the [latest GitHub Release](https://github.com/au2001/icloud-passwords-firefox/releases/latest).
+4. Download the `icloud_passwords_install` file from the [latest GitHub Release](https://github.com/au2001/icloud-passwords-firefox/releases/latest).
 5. Run the downloaded executable **as administrator**.
 6. Restart Firefox, and you should be good to go!
 
