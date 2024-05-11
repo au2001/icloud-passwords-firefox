@@ -20,7 +20,7 @@ export function PasswordsView() {
     setFillError(undefined);
 
     try {
-      // Can't use GET_PASSWORD_FOR_LOGIN_NAME here
+      // Can't use FETCH_PASSWORD_FOR_LOGIN_NAME here
       // See https://bugzilla.mozilla.org/show_bug.cgi?id=1292701
       const { success, error } = await browser.runtime.sendMessage({
         cmd: `${action}_PASSWORD`,

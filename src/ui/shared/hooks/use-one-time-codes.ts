@@ -22,7 +22,7 @@ export const useOneTimeCodes = (tabId?: number, url?: string) => {
     try {
       const { success, oneTimeCodes, error } =
         await browser.runtime.sendMessage({
-          cmd: "GET_ONE_TIME_CODES",
+          cmd: "LIST_ONE_TIME_CODES",
           tabId,
           url,
         });

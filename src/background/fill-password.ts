@@ -2,14 +2,14 @@ import { fillLoginForm, getLoginForms } from "../utils/dom";
 
 declare global {
   interface Window {
-    iCloudPasswordsFill: (
+    iCPFillPassword: (
       username: string,
       password: string,
     ) => Promise<{ success: true; warnings: string[] }>;
   }
 }
 
-window.iCloudPasswordsFill = async (username, password) => {
+window.iCPFillPassword = async (username, password) => {
   const warnings: string[] = [];
 
   const forms = getLoginForms();

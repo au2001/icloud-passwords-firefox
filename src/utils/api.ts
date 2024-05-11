@@ -255,7 +255,7 @@ export class ApplePasswordManager extends EventEmitter {
     });
   }
 
-  async getLoginNamesForURL(tabId: number, url: string) {
+  async listLoginNamesForURL(tabId: number, url: string) {
     if (this.session === undefined)
       throw new Error("Invalid session state: not initialized");
 
@@ -316,7 +316,7 @@ export class ApplePasswordManager extends EventEmitter {
     }
   }
 
-  async getPasswordForLoginName(
+  async fetchPasswordForLoginName(
     tabId: number,
     url: string,
     loginName: { username: string; sites: string[] },
@@ -369,19 +369,21 @@ export class ApplePasswordManager extends EventEmitter {
     }
 
     switch (response.STATUS) {
-      case QueryStatus.SUCCESS:
-        return (response.Entries as any[]).map(({ USR, PWD, sites }) => ({
+      case QueryStatus.SUCCESS: {
+        const { USR, PWD, sites } = response.Entries[0];
+        return {
           username: USR,
           password: PWD,
           sites,
-        }))[0];
+        };
+      }
 
       default:
         throwQueryStatusError(response.STATUS);
     }
   }
 
-  async getOneTimeCodes(tabId: number, url: string) {
+  async listOneTimeCodes(tabId: number, url: string) {
     if (this.session === undefined)
       throw new Error("Invalid session state: not initialized");
 

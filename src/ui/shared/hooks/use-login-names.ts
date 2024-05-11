@@ -19,7 +19,7 @@ export const useLoginNames = (tabId?: number, url?: string) => {
 
     try {
       const { success, loginNames, error } = await browser.runtime.sendMessage({
-        cmd: "GET_LOGIN_NAMES_FOR_URL",
+        cmd: "LIST_LOGIN_NAMES_FOR_URL",
         tabId,
         url,
       });

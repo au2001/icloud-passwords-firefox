@@ -47,19 +47,19 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
           success: true,
         };
 
-      case "GET_LOGIN_NAMES_FOR_URL":
+      case "LIST_LOGIN_NAMES_FOR_URL":
         return {
           success: true,
-          loginNames: await getAPI().getLoginNamesForURL(
+          loginNames: await getAPI().listLoginNamesForURL(
             message.tabId,
             message.url,
           ),
         };
 
-      case "GET_PASSWORD_FOR_LOGIN_NAME":
+      case "FETCH_PASSWORD_FOR_LOGIN_NAME":
         return {
           success: true,
-          loginName: await getAPI().getPasswordForLoginName(
+          loginName: await getAPI().fetchPasswordForLoginName(
             message.tabId,
             message.url,
             message.loginName,
@@ -67,7 +67,7 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
         };
 
       case "FILL_PASSWORD": {
-        const { username, password } = await getAPI().getPasswordForLoginName(
+        const { username, password } = await getAPI().fetchPasswordForLoginName(
           message.tabId ?? sender.tab?.id ?? -1,
           message.url,
           message.loginName,
@@ -107,7 +107,7 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
               tabId: tab.id,
             },
             func: (username, password) =>
-              window.iCloudPasswordsFill(username, password),
+              window.iCPFillPassword(username, password),
             args: [username, password],
           });
 
@@ -124,7 +124,7 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
       }
 
       case "COPY_PASSWORD": {
-        const { password } = await getAPI().getPasswordForLoginName(
+        const { password } = await getAPI().fetchPasswordForLoginName(
           message.tabId,
           message.url,
           message.loginName,
@@ -137,10 +137,10 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
         };
       }
 
-      case "GET_ONE_TIME_CODES":
+      case "LIST_ONE_TIME_CODES":
         return {
           success: true,
-          oneTimeCodes: await getAPI().getOneTimeCodes(
+          oneTimeCodes: await getAPI().listOneTimeCodes(
             message.tabId,
             message.url,
           ),

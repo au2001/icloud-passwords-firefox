@@ -58,7 +58,7 @@ export function HomeView() {
   if (new URL(tab.url).hostname === "")
     return <ErrorView error={`URL is not compatible: ${tab.url}`} />;
   if (loginNames === undefined)
-    return <LoadingView action="GET_LOGIN_NAMES_FOR_URL" />;
+    return <LoadingView action="LIST_LOGIN_NAMES_FOR_URL" />;
 
   const context: HomeContext = {
     tab,
