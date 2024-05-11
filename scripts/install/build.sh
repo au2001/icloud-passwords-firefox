@@ -12,7 +12,7 @@ build() {
         suffix="$suffix.exe"
     fi
 
-    GOOS="$os" GOARCH="$arch" go build -o "./dist/keychain_passwords_for_macos_install$suffix"
+    GOOS="$os" GOARCH="$arch" go build -o "./dist/icloud_passwords_install$suffix"
 }
 
 rm -rf ./dist
