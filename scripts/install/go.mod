@@ -1,4 +1,4 @@
-module icloud-passwords-firefox-install
+module keychain_passwords_for_macos_install
 
 go 1.21.6
 

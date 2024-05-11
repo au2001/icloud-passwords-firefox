@@ -5,14 +5,14 @@ cd `dirname "$0"`
 build() {
     os="$1"
     arch="$2"
-    suffix="${3:--$os}"
+    suffix="${3:-_$os}"
 
     if [ "$os" = "windows" ]
     then
         suffix="$suffix.exe"
     fi
 
-    GOOS="$os" GOARCH="$arch" go build -o "./dist/icloud-passwords-firefox-install$suffix"
+    GOOS="$os" GOARCH="$arch" go build -o "./dist/keychain_passwords_for_macos_install$suffix"
 }
 
 rm -rf ./dist
