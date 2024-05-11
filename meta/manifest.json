@@ -1,6 +1,6 @@
 {
   "name": "Keychain Passwords for macOS",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Use your passwords stored on iCloud Keychain® right from Firefox.",
   "author": "Aurélien",
   "manifest_version": 3,
