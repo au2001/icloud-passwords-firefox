@@ -46,7 +46,7 @@ func (manifest *Manifest) Write(path string) error {
 }
 
 func (manifest *Manifest) Register(path string) error {
-	// Create folders if missing and write manifest
+	// Create parent folders if missing
 	err := os.MkdirAll(filepath.Dir(path), 0755)
 	if err != nil {
 		return err
