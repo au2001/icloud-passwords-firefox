@@ -1,3 +1,11 @@
+# Update: 2024-12-04
+
+The [AMO (addons.mozilla.org)](https://addons.mozilla.org/en-US/firefox/addon/icloud-passwords/) listing of this extension was transferred to Apple Inc.\
+They are now the sole owners in charge of maintaining their own official iCloud Passwords extension.\
+This repository and source code are no longer linked in any way to it appart from historical reasons.
+
+---
+
 <p align="center">
 <a href="https://addons.mozilla.org/en-US/firefox/addon/icloud-passwords/">
 <img src="meta/images/logo-128.png" alt="Logo" />
