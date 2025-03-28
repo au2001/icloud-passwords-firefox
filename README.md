@@ -1,26 +1,18 @@
-# Update: 2024-12-04
-
-The [AMO (addons.mozilla.org)](https://addons.mozilla.org/en-US/firefox/addon/icloud-passwords/) listing of this extension was transferred to Apple Inc.\
-They are now the sole owners in charge of maintaining their own official iCloud Passwords extension.\
-This repository and source code are no longer linked in any way to it appart from historical reasons.
-
----
-
 <p align="center">
-<a href="https://addons.mozilla.org/en-US/firefox/addon/icloud-passwords/">
+<a href="https://addons.mozilla.org/en-US/firefox/addon/keychain/">
 <img src="meta/images/logo-128.png" alt="Logo" />
 </a>
 </p>
 <h1 align="center">
-<a href="https://addons.mozilla.org/en-US/firefox/addon/icloud-passwords/">
+<a href="https://addons.mozilla.org/en-US/firefox/addon/keychain/">
 iCloud Passwords for Firefox
 </a>
 </h1>
 
 <p align="center">
 <a href="https://github.com/au2001/icloud-passwords-firefox/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/au2001/icloud-passwords-firefox?style=for-the-badge" /></a>
-<a href="https://addons.mozilla.org/en-US/firefox/addon/icloud-passwords/"><img alt="Stars" src="https://img.shields.io/amo/stars/icloud-passwords?style=for-the-badge" /></a>
-<a href="https://addons.mozilla.org/en-US/firefox/addon/icloud-passwords/"><img alt="Users" src="https://img.shields.io/amo/users/icloud-passwords?style=for-the-badge" /></a>
+<a href="https://addons.mozilla.org/en-US/firefox/addon/keychain/"><img alt="Stars" src="https://img.shields.io/amo/stars/icloud-passwords?style=for-the-badge" /></a>
+<a href="https://addons.mozilla.org/en-US/firefox/addon/keychain/"><img alt="Users" src="https://img.shields.io/amo/users/icloud-passwords?style=for-the-badge" /></a>
 <a href="https://github.com/au2001/icloud-passwords-firefox/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/au2001/icloud-passwords-firefox?style=for-the-badge" /></a>
 </p>
 
@@ -30,7 +22,7 @@ Your passwords are automatically synchronized accross your Apple and other compa
 
 ## Installation
 
-**➡️ Recommended:** Download this extension from [AMO (addons.mozilla.org)](https://addons.mozilla.org/en-US/firefox/addon/icloud-passwords/).
+**➡️ Recommended:** Download this extension from [AMO (addons.mozilla.org)](https://addons.mozilla.org/en-US/firefox/addon/keychain/).
 
 Alternatively, download the latest GitHub release and install it on Firefox by navigating to `about:addons`.
 
@@ -73,6 +65,19 @@ The source code for the Golang executable is available [in the `scripts/install`
 - [Report a bug](https://github.com/au2001/icloud-passwords-firefox/issues/new)
 - [Request a new feature](https://github.com/au2001/icloud-passwords-firefox/issues/new)
 - [Reach out](https://aurelien.garnier.dev/contact#contact)
+
+## News
+
+### 2025-03-10
+
+While the original AMO listing still belongs to Apple, [a new one](https://addons.mozilla.org/en-US/firefox/addon/keychain/) has been created for this repository.\
+It is meant to offer an open source alternative to the official version with greatly improved performance.
+
+### 2024-12-04
+
+The [AMO (addons.mozilla.org)](https://addons.mozilla.org/en-US/firefox/addon/icloud-passwords/) listing of this extension was transferred to Apple Inc.\
+They are now the sole owners in charge of maintaining their own official iCloud Passwords extension.\
+This repository and source code are no longer linked in any way to it appart from historical reasons.
 
 ## Features
 
