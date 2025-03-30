@@ -9,7 +9,7 @@ import (
 
 const (
 	NATIVE_MESSAGING_HOST = "com.apple.passwordmanager"
-	EXTENSION_ID          = "password-manager-firefox-extension@apple.com"
+	EXTENSION_ID          = "apple-passwords-firefox-extension@apple.com"
 )
 
 func main() {

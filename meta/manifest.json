@@ -41,7 +41,7 @@
   ],
   "browser_specific_settings": {
     "gecko": {
-      "id": "password-manager-firefox-extension@apple.com"
+      "id": "apple-passwords-firefox-extension@apple.com"
     }
   }
 }
