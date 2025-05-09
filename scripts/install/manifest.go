@@ -1,76 +1,85 @@
 package main
 
 import (
-	"encoding/json"
-	"os"
-	"path/filepath"
-	"strings"
+    "encoding/json"
+    "fmt"
+    "io/ioutil"
+    "log"
+    "os"
+    "path/filepath"
+    "sort"
+    "strings"
 )
 
 type Manifest struct {
-	Name              string   `json:"name"`
-	Description       string   `json:"description,omitempty"`
-	Path              string   `json:"path"`
-	Type              string   `json:"type"`
-	AllowedExtensions []string `json:"allowed_extensions,omitempty"`
-	AllowedOrigins    []string `json:"allowed_origins,omitempty"`
+    Name              string   `json:"name"`
+    Description       string   `json:"description"`
+    Path              string   `json:"path"`
+    Type              string   `json:"type"`
+    AllowedExtensions []string `json:"allowed_extensions"`
 }
 
-func ReadManifest(path string) (*Manifest, error) {
-	bytes, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
+// findLatestICloudHelperPath searches for the iCloudPasswordsExtensionHelper.exe executable
+// within the WindowsApps directory and returns the path of the most recent version.
+func findLatestICloudHelperPath() (string, error) {
+    baseDir := `C:\Program Files\WindowsApps`
+    entries, err := ioutil.ReadDir(baseDir)
+    if err != nil {
+        return "", fmt.Errorf("failed to read WindowsApps directory: %w", err)
+    }
 
-	var manifest Manifest
-	err = json.Unmarshal(bytes, &manifest)
-	if err != nil {
-		return nil, err
-	}
+    var candidates []string
+    for _, entry := range entries {
+        if strings.HasPrefix(entry.Name(), "AppleInc.iCloud_") {
+            exePath := filepath.Join(baseDir, entry.Name(), "iCloud", "iCloudPasswordsExtensionHelper.exe")
+            if _, statErr := os.Stat(exePath); statErr == nil {
+                candidates = append(candidates, exePath)
+            }
+        }
+    }
 
-	return &manifest, nil
+    if len(candidates) == 0 {
+        return "", fmt.Errorf("no iCloudPasswordsExtensionHelper.exe found in %s", baseDir)
+    }
+
+    // Sort candidates in reverse alphabetical order and pick the first (latest) one
+    sort.Slice(candidates, func(i, j int) bool {
+        return candidates[i] > candidates[j]
+    })
+
+    return candidates[0], nil
 }
 
-func (manifest *Manifest) Write(path string) error {
-	bytes, err := json.MarshalIndent(manifest, "", strings.Repeat(" ", 4))
-	if err != nil {
-		return err
-	}
+func main() {
+    // Path where the manifest JSON will be written
+    manifestPath := `C:\Program Files\Mozilla Firefox\FirefoxPwdMgrHostApp_manifest.json`
 
-	err = os.WriteFile(path, bytes, 0644)
-	if err != nil {
-		return err
-	}
+    // Locate the installed iCloud helper executable
+    helperPath, err := findLatestICloudHelperPath()
+    if err != nil {
+        log.Fatalf("error locating iCloud helper executable: %v", err)
+    }
 
-	return nil
-}
+    manifest := Manifest{
+        Name:        "com.apple.passwordmanager",
+        Description: "Apple iCloud Chrome/Edge Password Manager Host App",
+        Path:        helperPath,
+        Type:        "stdio",
+        AllowedExtensions: []string{
+            "apple-passwords-firefox-extension@apple.com",
+        },
+    }
 
-func (manifest *Manifest) Register(path string) error {
-	err := manifest.Write(path)
-	if err != nil {
-		return err
-	}
+    // Serialize manifest to JSON with indentation
+    data, err := json.MarshalIndent(manifest, "", "    ")
+    if err != nil {
+        log.Fatalf("error serializing manifest JSON: %v", err)
+    }
 
-	err = RegisterFirefoxManifestPath(path)
-	if err != nil {
-		return err
-	}
+    // Write JSON file
+    if writeErr := ioutil.WriteFile(manifestPath, data, 0644); writeErr != nil {
+        log.Fatalf("error writing manifest file: %v", writeErr)
+    }
 
-	return nil
-}
-
-func getManifestPaths(dirs []string) []string {
-	paths := make([]string, len(dirs))
-
-	home, _ := os.UserHomeDir()
-
-	for i, dir := range dirs {
-		if home != "" && strings.HasPrefix(dir, "~/") {
-			dir = filepath.Join(home, dir[2:])
-		}
-
-		paths[i] = dir + NATIVE_MESSAGING_HOST + ".json"
-	}
-
-	return paths
+    fmt.Printf("Manifest successfully updated at %s using helper: %s\n", manifestPath, helperPath)
 }
