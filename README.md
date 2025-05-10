@@ -34,18 +34,38 @@ Refer to the following table to see if your configuration is supported:
 | ![macOS](https://img.shields.io/badge/macos-white?style=for-the-badge&logo=apple&logoColor=black) | <= Ventura (13) | [❌ Unsupported](https://github.com/au2001/icloud-passwords-firefox/issues/33) |
 | ![Windows](https://img.shields.io/badge/windows-blue?style=for-the-badge&logo=windows10)          | >= 7            | ⚠️ Requires additional setup (see below)                                       |
 | ![Windows](https://img.shields.io/badge/windows-blue?style=for-the-badge&logo=windowsxp)          | <= Vista        | ❌ Unsupported                                                                 |
-| ![Linux](https://img.shields.io/badge/linux-black?style=for-the-badge&logo=linux)                 | Any             | [❌ Unsupported](https://github.com/au2001/icloud-passwords-firefox/issues/34) |
+| ![Linux](https://img.shields.io/badge/linux-black?style=for-the-badge&logo=linux)                 | Any             | ⚠️ Requires additional setup (see below)
 
-### Additional setup
+### Additional setup (Windows)
 
-For some operating systems, additional steps are required for the extension to work:
+For Windows, additional steps are required for the extension to work:
 
-1. Install [iCloud for Windows](https://support.apple.com/kb/DL1455).
+1. Install [iCloud for Windows][icloud-for-windows].
 2. Enable the `Passwords` option.
 3. Click on `Install Extension...` for either Microsoft Edge or Google Chrome.
-4. Download the `icloud_passwords_install` file from the [latest GitHub Release](https://github.com/au2001/icloud-passwords-firefox/releases/latest).
+4. Download the `icloud_passwords_install` file from the [latest GitHub Release][github-latest-release].
 5. Run the downloaded executable **as administrator**.
 6. Restart Firefox, and you should be good to go!
+
+### Additional setup (Linux)
+
+For Linux, additional steps are required for the extension to work, as there is no native support for this platform. A Windows virtual machine is needed to enable the functionality:
+
+1. Set up a Windows virtual machine on your Linux host using software like KVM or VirtualBox.
+2. Install [iCloud for Windows][icloud-for-windows] in the Windows VM.
+3. Enable the `Passwords` option in iCloud for Windows.
+4. Click on `Install Extension...` for either Microsoft Edge or Google Chrome.
+5. Download the `icloud_passwords_guest_helper` file from the [latest GitHub Release][github-latest-release] in the Windows VM.
+6. Run the downloaded executable in the Windows VM (optionally add it to Windows startup).
+7. Ensure `socat` is installed on the Linux host (e.g., `sudo apt install socat`).
+8. Download the `icloud_passwords_install` file from the [latest GitHub Release][github-latest-release] on the Linux host.
+9. Run the following command, replacing `<VM-IP>` with the IP address of your Windows VM:
+    ```bash
+    ./icloud_passwords_install --mode=tunnel --tunnel-address=<VM-IP>:4646
+    ```
+10. Restart Firefox, and you should be good to go!
+
+**Note:** The Windows virtual machine must be running whenever you use the extension.
 
 #### Why is this required?
 
@@ -58,7 +78,11 @@ For such operating systems, this utility needs to be replaced. iCloud for Window
 By default, iCloud for Windows does not grant access to Firefox to access passwords.\
 The provided executable thus enables the communication between Firefox and iCloud for Windows.
 
-The source code for the Golang executable is available [in the `scripts/install` directory](https://github.com/au2001/icloud-passwords-firefox/tree/main/scripts/install/main.go).
+Linux users can still use this extension by setting up iCloud for Windows in a Windows virtual machine.
+By creating a local TCP tunnel, the Linux browser extension can seamlessly connect to iCloud for Windows
+running inside the virtual machine.
+
+The source code for the Golang executables is available [in the `scripts/install` directory](https://github.com/au2001/icloud-passwords-firefox/tree/main/scripts/install/).
 
 ## Need Help?
 
@@ -130,3 +154,6 @@ To build and run the extension locally when developing, you should follow these 
 This extension is licensed under the [Apache License 2.0](https://github.com/au2001/icloud-passwords-firefox/blob/main/LICENSE).
 
 **⚠️ All forks of this repository should explicitly state their changes in a clear manner within the README.**
+
+[icloud-for-windows]: https://support.apple.com/kb/DL1455
+[github-latest-release]: https://github.com/au2001/icloud-passwords-firefox/releases/latest

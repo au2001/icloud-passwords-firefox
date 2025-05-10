@@ -1,6 +1,6 @@
 //go:build !windows && !darwin
 
-package main
+package icloud
 
 func GetChromeManifestPaths() []string {
 	return getManifestPaths([]string{
