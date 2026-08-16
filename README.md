@@ -11,8 +11,8 @@ iCloud Passwords for Firefox
 
 <p align="center">
 <a href="https://github.com/au2001/icloud-passwords-firefox/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/au2001/icloud-passwords-firefox?style=for-the-badge" /></a>
-<a href="https://addons.mozilla.org/en-US/firefox/addon/keychain/"><img alt="Stars" src="https://img.shields.io/amo/stars/icloud-passwords?style=for-the-badge" /></a>
-<a href="https://addons.mozilla.org/en-US/firefox/addon/keychain/"><img alt="Users" src="https://img.shields.io/amo/users/icloud-passwords?style=for-the-badge" /></a>
+<a href="https://addons.mozilla.org/en-US/firefox/addon/keychain/"><img alt="Stars" src="https://img.shields.io/amo/stars/keychain?style=for-the-badge" /></a>
+<a href="https://addons.mozilla.org/en-US/firefox/addon/keychain/"><img alt="Users" src="https://img.shields.io/amo/users/keychain?style=for-the-badge" /></a>
 <a href="https://github.com/au2001/icloud-passwords-firefox/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/au2001/icloud-passwords-firefox?style=for-the-badge" /></a>
 </p>
 
