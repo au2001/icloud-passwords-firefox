@@ -1,4 +1,4 @@
-package main
+package icloud
 
 import (
 	"encoding/json"
@@ -46,6 +46,10 @@ func (manifest *Manifest) Write(path string) error {
 }
 
 func (manifest *Manifest) Register(path string) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0751); err != nil {
+		return err
+	}
+
 	err := manifest.Write(path)
 	if err != nil {
 		return err
@@ -69,7 +73,7 @@ func getManifestPaths(dirs []string) []string {
 			dir = filepath.Join(home, dir[2:])
 		}
 
-		paths[i] = dir + NATIVE_MESSAGING_HOST + ".json"
+		paths[i] = filepath.Join(dir, NATIVE_MESSAGING_HOST + ".json")
 	}
 
 	return paths

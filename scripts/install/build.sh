@@ -3,22 +3,23 @@
 cd `dirname "$0"`
 
 build() {
-    os="$1"
-    arch="$2"
-    suffix="${3:-_$os}"
+    cmd="$1"
+    os="$2"
+    arch="$3"
+    suffix="${4:-_$os}"
 
     if [ "$os" = "windows" ]
     then
         suffix="$suffix.exe"
     fi
 
-    GOOS="$os" GOARCH="$arch" go build -o "./dist/icloud_passwords_install$suffix"
+    GOOS="$os" GOARCH="$arch" go build -o "./dist/$cmd$suffix" "cmd/$cmd/main.go"
 }
 
 rm -rf ./dist
 
-# build linux amd64 &
-# build darwin amd64 -macos &
-build windows amd64 &
+build icloud_passwords_install windows amd64 &
+build icloud_passwords_install linux amd64 &
+build icloud_passwords_guest_helper windows amd64 &
 
 wait
