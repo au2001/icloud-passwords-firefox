@@ -83,23 +83,28 @@ export const getLoginForms = () => {
 // Necessary for some JS libraries like React to detect the value correctly
 // See https://stackoverflow.com/a/46012210
 export const setNativeValue = (input: HTMLInputElement, value: string) => {
-  input.value = value;
+  // React >= 15.6 installs a value tracker on the input. Assigning through the
+  // tracked setter (input.value = value) updates the tracker too, so a later
+  // "input" event looks like a no-op and React swallows it. We must write
+  // through the *native* prototype setter FIRST — that bypasses the tracker, so
+  // the tracker still holds the old value when "input" fires and React sees a
+  // real change. (Previously the input event was dispatched before this, which
+  // defeated the purpose on React >= 15.6.)
+  const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+    HTMLInputElement.prototype,
+    "value",
+  )?.set;
 
-  // React <= 15.5
+  if (nativeInputValueSetter) nativeInputValueSetter.call(input, value);
+  else input.value = value;
+
+  // React <= 15.5 honored a `simulated` flag on the event object.
   input.dispatchEvent(
     Object.assign(new InputEvent("input", { bubbles: true }), {
       simulated: true,
       value,
     }),
   );
-
-  // React >= 15.6
-  const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value",
-  )?.set;
-
-  nativeInputValueSetter?.call(input, value);
 
   input.dispatchEvent(new Event("change", { bubbles: true }));
 
