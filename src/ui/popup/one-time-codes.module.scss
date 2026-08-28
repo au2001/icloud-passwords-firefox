@@ -1,0 +1,65 @@
+@import "../shared/styles/lib";
+
+.oneTimeCodes {
+  > h2 {
+    @include font-in-content-body-default;
+    color: $color-text-primary;
+
+    padding: 10px 20px;
+  }
+
+  > ul {
+    padding: 0;
+    list-style-type: none;
+
+    > li {
+      display: flex;
+      padding: 5px 20px;
+
+      gap: 16px;
+      align-items: center;
+
+      > div {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-width: 0;
+
+        > span {
+          overflow: hidden;
+          text-overflow: ellipsis;
+
+          &:first-child {
+            text-decoration: underline;
+          }
+
+          &:last-child {
+            color: $color-text-secondary;
+          }
+        }
+      }
+
+      > a {
+        display: flex;
+        padding: 4px 3px;
+        border-radius: 5px;
+
+        > svg {
+          color: $color-text-primary;
+          height: 18px;
+          width: 18px;
+        }
+
+        &:hover {
+          background-color: $color-background-3;
+          cursor: pointer;
+        }
+      }
+
+      &:hover {
+        background-color: $color-background-2;
+        cursor: pointer;
+      }
+    }
+  }
+}
